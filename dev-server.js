@@ -24,6 +24,7 @@ app.all('/api/transactions',      wrap(require('./api/transactions/index')));
 app.all('/api/transactions/:id',  wrap(require('./api/transactions/[id]')));
 app.all('/api/settings',          wrap(require('./api/settings/index')));
 app.all('/api/pix/generate',      wrap(require('./api/pix/generate')));
+app.all('/api/pix/status',        wrap(require('./api/pix/status')));
 app.all('/api/webhook/suitpay',   wrap(require('./api/webhook/suitpay')));
 app.all('/api/logs',              wrap(require('./api/logs/index')));
 app.all('/api/debug',             wrap(require('./api/debug')));
