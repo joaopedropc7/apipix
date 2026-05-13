@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ override: true });
 const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async (req, res) => {
