@@ -7,9 +7,16 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
-      const rows = await dbSelect('transactions', `?id=eq.${id}`);
+      const rows = await dbSelect('transactions', `?id=eq.${id}&select=*`);
       if (!rows.length) return res.status(404).json({ error: 'Transação não encontrada' });
-      return res.status(200).json(rows[0]);
+      const tx = rows[0];
+
+      // Garante que raw_request é objeto (não string)
+      if (typeof tx.raw_request === 'string') {
+        try { tx.raw_request = JSON.parse(tx.raw_request); } catch (_) {}
+      }
+
+      return res.status(200).json(tx);
     }
 
     if (req.method === 'PATCH' && req.body?.action === 'cancel') {

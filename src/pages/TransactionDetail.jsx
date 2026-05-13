@@ -16,7 +16,14 @@ export default function TransactionDetail() {
 
   useEffect(() => {
     getTransaction(id)
-      .then(r => setTx(r.data))
+      .then(r => {
+        const data = r.data;
+        // Garante que raw_request é objeto
+        if (typeof data.raw_request === 'string') {
+          try { data.raw_request = JSON.parse(data.raw_request); } catch (_) {}
+        }
+        setTx(data);
+      })
       .catch(err => setError(err.response?.data?.error || 'Erro ao carregar transação'));
   }, [id]);
 
@@ -159,8 +166,11 @@ export default function TransactionDetail() {
             </div>
 
             {(() => {
-              const utm = tx.raw_request?.trackingParameters;
-              const hasUtm = utm && Object.values(utm).some(v => v);
+              const raw = typeof tx.raw_request === 'string'
+                ? (() => { try { return JSON.parse(tx.raw_request); } catch { return {}; } })()
+                : (tx.raw_request || {});
+              const utm = raw.trackingParameters || {};
+              const hasUtm = Object.values(utm).some(v => v);
               if (!hasUtm) return null;
               const fields = [
                 ['utm_source',   utm.utm_source],
