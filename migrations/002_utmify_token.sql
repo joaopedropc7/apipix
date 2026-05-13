@@ -5,4 +5,4 @@
 
 INSERT INTO settings (key, value)
 VALUES ('utmify_token', '')
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;

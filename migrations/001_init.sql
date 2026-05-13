@@ -21,7 +21,7 @@ INSERT INTO settings (key, value) VALUES
   ('api_key',              ''),
   ('server_base_url',      ''),
   ('utmify_token',         '')
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 -- ----------------------------------------------------------------
 -- TABELA: transactions
@@ -103,4 +103,4 @@ GRANT USAGE, SELECT ON SEQUENCE webhooks_id_seq TO anon, authenticated;
 
 -- Adicionar utmify_token se já tiver rodado a migration antes
 INSERT INTO settings (key, value) VALUES ('utmify_token', '')
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
