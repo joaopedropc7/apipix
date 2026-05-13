@@ -9,8 +9,10 @@ function getSB() {
 }
 
 async function getSettings() {
-  const { data } = await getSB().from('settings').select('key, value');
-  return Object.fromEntries((data || []).map(r => [r.key, r.value]));
+  const { data, error } = await getSB().from('settings').select('key, value');
+  if (error) throw new Error(`Supabase erro ao ler settings: ${error.message}`);
+  if (!data || data.length === 0) throw new Error('Tabela settings vazia — execute a migration 001_init.sql no Supabase');
+  return Object.fromEntries(data.map(r => [r.key, r.value]));
 }
 
 async function setSetting(key, value) {

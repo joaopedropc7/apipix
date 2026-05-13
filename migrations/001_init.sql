@@ -5,7 +5,6 @@
 
 -- ----------------------------------------------------------------
 -- TABELA: settings
--- Armazena todas as configurações do sistema (substitui .json)
 -- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
@@ -86,9 +85,17 @@ CREATE INDEX IF NOT EXISTS idx_logs_level                  ON logs(level);
 CREATE INDEX IF NOT EXISTS idx_webhooks_id_transaction     ON webhooks(id_transaction);
 
 -- ----------------------------------------------------------------
--- DESABILITAR RLS (necessário para a anon key funcionar)
+-- DESABILITAR RLS + GRANTS para anon key funcionar
 -- ----------------------------------------------------------------
 ALTER TABLE settings     DISABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE logs         DISABLE ROW LEVEL SECURITY;
 ALTER TABLE webhooks     DISABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON settings     TO anon, authenticated;
+GRANT ALL ON transactions TO anon, authenticated;
+GRANT ALL ON logs         TO anon, authenticated;
+GRANT ALL ON webhooks     TO anon, authenticated;
+
+GRANT USAGE, SELECT ON SEQUENCE logs_id_seq     TO anon, authenticated;
+GRANT USAGE, SELECT ON SEQUENCE webhooks_id_seq TO anon, authenticated;

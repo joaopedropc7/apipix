@@ -7,7 +7,13 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { username, password } = req.body;
-  const settings = await getSettings();
+
+  let settings;
+  try {
+    settings = await getSettings();
+  } catch (err) {
+    return res.status(503).json({ error: `Banco não configurado: ${err.message}` });
+  }
 
   if (username !== settings.admin_user) {
     return res.status(401).json({ error: 'Usuário ou senha inválidos' });
