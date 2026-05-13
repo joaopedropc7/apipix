@@ -21,15 +21,22 @@ module.exports = async (req, res) => {
 
   const body = req.body;
 
-  if (!body.dueDate || !body.amount || !body.client?.name || !body.client?.document) {
+  if (!body.amount || !body.client?.name || !body.client?.document) {
     return res.status(400).json({
       error: 'Campos obrigatórios ausentes',
-      required: ['dueDate', 'amount', 'client.name', 'client.document'],
+      required: ['amount', 'client.name', 'client.document'],
     });
   }
 
-  // Sempre gera requestNumber se não enviado
-  if (!body.requestNumber) body.requestNumber = uuidv4().slice(0, 8);
+  // Gera requestNumber único automaticamente
+  body.requestNumber = uuidv4().replace(/-/g, '').slice(0, 16);
+
+  // Define dueDate automaticamente como amanhã se não informado
+  if (!body.dueDate) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    body.dueDate = tomorrow.toISOString().slice(0, 10);
+  }
 
   // Sempre usa a URL de webhook do próprio sistema — ignora qualquer callbackUrl do body
   const serverBase = settings.server_base_url?.trim().replace(/\/$/, '');
