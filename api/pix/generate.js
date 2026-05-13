@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
-const { getSB, getSettings, addLog, setCors } = require('../_helpers');
+const { dbInsert, getSettings, addLog, setCors } = require('../_helpers');
 
 module.exports = async (req, res) => {
   setCors(res);
@@ -39,26 +39,17 @@ module.exports = async (req, res) => {
       { headers: { ci: settings.suitpay_ci, cs: settings.suitpay_cs, 'Content-Type': 'application/json' }, timeout: 30000 }
     );
 
-    const sb = getSB();
-    const { data: inserted } = await sb.from('transactions').insert({
-      request_number:      body.requestNumber,
-      id_transaction:      data.idTransaction || null,
-      amount:              parseFloat(body.amount),
-      shipping_amount:     parseFloat(body.shippingAmount) || 0,
-      discount_amount:     parseFloat(body.discountAmount) || 0,
-      client_name:         body.client.name,
-      client_document:     body.client.document,
-      client_email:        body.client.email || null,
-      client_phone:        body.client.phoneNumber || null,
-      due_date:            body.dueDate,
-      status:              'pending',
-      payment_code:        data.paymentCode || null,
-      payment_code_base64: data.paymentCodeBase64 || null,
-      callback_url:        body.callbackUrl || null,
-      username_checkout:   body.usernameCheckout || null,
-      raw_request:         body,
-      raw_response:        data,
-    }).select('id').single();
+    const inserted = await dbInsert('transactions', {
+      request_number: body.requestNumber, id_transaction: data.idTransaction || null,
+      amount: parseFloat(body.amount), shipping_amount: parseFloat(body.shippingAmount) || 0,
+      discount_amount: parseFloat(body.discountAmount) || 0,
+      client_name: body.client.name, client_document: body.client.document,
+      client_email: body.client.email || null, client_phone: body.client.phoneNumber || null,
+      due_date: body.dueDate, status: 'pending',
+      payment_code: data.paymentCode || null, payment_code_base64: data.paymentCodeBase64 || null,
+      callback_url: body.callbackUrl || null, username_checkout: body.usernameCheckout || null,
+      raw_request: body, raw_response: data,
+    });
 
     await addLog('info', 'api', `QR Code gerado: ${body.requestNumber}`, { idTransaction: data.idTransaction });
     return res.status(200).json({ ...data, _id: inserted?.id });
@@ -66,18 +57,11 @@ module.exports = async (req, res) => {
   } catch (err) {
     const errData = err.response?.data || { message: err.message };
     await addLog('error', 'api', `Erro ao gerar QR Code: ${body.requestNumber}`, errData);
-
-    await getSB().from('transactions').insert({
-      request_number:  body.requestNumber,
-      amount:          parseFloat(body.amount) || 0,
-      client_name:     body.client?.name || 'N/A',
-      client_document: body.client?.document || 'N/A',
-      due_date:        body.dueDate || '',
-      status:          'error',
-      raw_request:     body,
-      raw_response:    errData,
+    await dbInsert('transactions', {
+      request_number: body.requestNumber, amount: parseFloat(body.amount) || 0,
+      client_name: body.client?.name || 'N/A', client_document: body.client?.document || 'N/A',
+      due_date: body.dueDate || '', status: 'error', raw_request: body, raw_response: errData,
     }).catch(() => {});
-
     return res.status(err.response?.status || 500).json(errData);
   }
 };

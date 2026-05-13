@@ -1,26 +1,28 @@
-const { getSB, authenticate } = require('../_helpers');
+const { dbSelect, dbDelete, authenticate } = require('../_helpers');
 
 module.exports = async (req, res) => {
   if (!authenticate(req, res)) return;
 
-  const sb = getSB();
-
   if (req.method === 'GET') {
     const { level, type, page = 1, limit = 50 } = req.query;
-    const from = (parseInt(page) - 1) * parseInt(limit);
-    const to = from + parseInt(limit) - 1;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    let q = sb.from('logs').select('*', { count: 'exact' });
-    if (level) q = q.eq('level', level);
-    if (type)  q = q.eq('type', type);
+    let filter = `?select=*&order=created_at.desc&limit=${limit}&offset=${offset}`;
+    let countFilter = '?select=id';
+    if (level) { filter += `&level=eq.${level}`; countFilter += `&level=eq.${level}`; }
+    if (type)  { filter += `&type=eq.${type}`;   countFilter += `&type=eq.${type}`; }
 
-    const { data, count } = await q.order('created_at', { ascending: false }).range(from, to);
-    return res.status(200).json({ logs: data || [], total: count || 0, page: parseInt(page) });
+    const [data, all] = await Promise.all([
+      dbSelect('logs', filter),
+      dbSelect('logs', countFilter),
+    ]);
+
+    return res.status(200).json({ logs: data, total: all.length, page: parseInt(page) });
   }
 
   if (req.method === 'DELETE') {
     const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
-    await sb.from('logs').delete().lt('created_at', cutoff);
+    await dbDelete('logs', `created_at=lt.${cutoff}`);
     return res.status(200).json({ ok: true });
   }
 

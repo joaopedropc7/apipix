@@ -1,4 +1,4 @@
-const { getSB, addLog, parseSuitPayDate } = require('../_helpers');
+const { dbInsert, dbUpdate, addLog, parseSuitPayDate } = require('../_helpers');
 
 const STATUS_MAP = {
   PAID_OUT: 'paid', PAID: 'paid', COMPLETED: 'paid',
@@ -10,30 +10,26 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
 
   const p = req.body;
-  const sb = getSB();
 
-  await sb.from('webhooks').insert({ id_transaction: p.idTransaction || null, payload: p }).catch(() => {});
+  await dbInsert('webhooks', { id_transaction: p.idTransaction || null, payload: p }).catch(() => {});
 
   const newStatus = STATUS_MAP[(p.statusTransaction || '').toUpperCase()];
 
   if (newStatus && (p.idTransaction || p.requestNumber)) {
     const update = {
-      status:       newStatus,
-      updated_at:   new Date().toISOString(),
+      status: newStatus, updated_at: new Date().toISOString(),
       payment_date: parseSuitPayDate(p.paymentDate),
-      payer_name:   p.payerName   || null,
-      payer_tax_id: p.payerTaxId  || null,
-      paid_value:   p.value       || null,
+      payer_name: p.payerName || null, payer_tax_id: p.payerTaxId || null,
+      paid_value: p.value || null,
     };
 
-    if (p.idTransaction) {
-      await sb.from('transactions').update(update).eq('id_transaction', p.idTransaction);
-    } else {
-      await sb.from('transactions').update(update).eq('request_number', p.requestNumber);
-    }
+    const filter = p.idTransaction
+      ? `id_transaction=eq.${p.idTransaction}`
+      : `request_number=eq.${p.requestNumber}`;
 
+    await dbUpdate('transactions', filter, update);
     await addLog('info', 'webhook',
-      `Pagamento recebido: ${p.idTransaction || p.requestNumber} → ${newStatus}`,
+      `Pagamento: ${p.idTransaction || p.requestNumber} → ${newStatus}`,
       { payerName: p.payerName, value: p.value, paymentDate: p.paymentDate }
     );
   }

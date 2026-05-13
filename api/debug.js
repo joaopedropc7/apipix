@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
 
   const result = {
     env: {
-      SUPABASE_URL: url ? `✅ ${url}` : '❌ ausente',
+      SUPABASE_URL: url || '❌ ausente',
       SUPABASE_ANON_KEY: key ? '✅ definida' : '❌ ausente',
       JWT_SECRET: process.env.JWT_SECRET ? '✅ definida' : '❌ ausente',
     },
@@ -16,21 +16,13 @@ module.exports = async (req, res) => {
     error: null,
   };
 
-  if (!url || !key) {
-    result.error = 'Variáveis ausentes';
-    return res.status(200).json(result);
-  }
-
   try {
-    const response = await axios.get(`${url}/rest/v1/settings?select=key`, {
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-      },
+    const { data } = await axios.get(`${url}/rest/v1/settings?select=key`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
       timeout: 10000,
     });
-    result.connectivity = '✅ conectado via axios';
-    result.settings_count = response.data?.length ?? 0;
+    result.connectivity = '✅ conectado';
+    result.settings_count = data?.length ?? 0;
   } catch (err) {
     result.connectivity = '❌ falhou';
     result.error = err.response

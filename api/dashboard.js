@@ -1,18 +1,16 @@
-const { getSB, authenticate } = require('./_helpers');
+const { dbSelect, authenticate } = require('./_helpers');
 
 module.exports = async (req, res) => {
   if (!authenticate(req, res)) return;
 
-  const sb = getSB();
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
-  const [allRes, recentRes, chartRes] = await Promise.all([
-    sb.from('transactions').select('status, amount'),
-    sb.from('transactions').select('id, request_number, client_name, amount, status, created_at').order('created_at', { ascending: false }).limit(10),
-    sb.from('transactions').select('created_at, amount').gte('created_at', sevenDaysAgo),
+  const [all, recent, chart] = await Promise.all([
+    dbSelect('transactions', '?select=status,amount'),
+    dbSelect('transactions', '?select=id,request_number,client_name,amount,status,created_at&order=created_at.desc&limit=10'),
+    dbSelect('transactions', `?select=created_at,amount&created_at=gte.${sevenDaysAgo}`),
   ]);
 
-  const all = allRes.data || [];
   const stats = {
     total: all.length,
     pending: all.filter(t => t.status === 'pending').length,
@@ -24,7 +22,7 @@ module.exports = async (req, res) => {
   };
 
   const dayMap = {};
-  (chartRes.data || []).forEach(t => {
+  chart.forEach(t => {
     const day = t.created_at.slice(0, 10);
     if (!dayMap[day]) dayMap[day] = { day, count: 0, total: 0 };
     dayMap[day].count++;
@@ -33,7 +31,7 @@ module.exports = async (req, res) => {
 
   res.status(200).json({
     stats,
-    recent: recentRes.data || [],
+    recent,
     chart: Object.values(dayMap).sort((a, b) => a.day.localeCompare(b.day)),
   });
 };

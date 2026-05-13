@@ -1,23 +1,20 @@
-const { getSB, authenticate, addLog } = require('../_helpers');
+const { dbSelect, dbUpdate, authenticate, addLog } = require('../_helpers');
 
 module.exports = async (req, res) => {
   if (!authenticate(req, res)) return;
 
-  const sb = getSB();
   const { id } = req.query;
 
   if (req.method === 'GET') {
-    const { data, error } = await sb.from('transactions').select('*').eq('id', id).single();
-    if (error || !data) return res.status(404).json({ error: 'Transação não encontrada' });
-    return res.status(200).json(data);
+    const rows = await dbSelect('transactions', `?id=eq.${id}`);
+    if (!rows.length) return res.status(404).json({ error: 'Transação não encontrada' });
+    return res.status(200).json(rows[0]);
   }
 
-  if (req.method === 'PATCH') {
-    if (req.body?.action === 'cancel') {
-      await sb.from('transactions').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', id);
-      await addLog('info', 'transaction', `Transação cancelada: ${id}`);
-      return res.status(200).json({ ok: true });
-    }
+  if (req.method === 'PATCH' && req.body?.action === 'cancel') {
+    await dbUpdate('transactions', `id=eq.${id}`, { status: 'cancelled', updated_at: new Date().toISOString() });
+    await addLog('info', 'transaction', `Transação cancelada: ${id}`);
+    return res.status(200).json({ ok: true });
   }
 
   res.status(405).end();

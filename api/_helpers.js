@@ -1,34 +1,78 @@
 require('dotenv').config({ override: true });
-const { createClient } = require('@supabase/supabase-js');
-const nodeFetch = require('node-fetch');
-const https = require('https');
+const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 
-// Usa node-fetch com agente https que ignora problemas de SSL
-const agent = new https.Agent({ rejectUnauthorized: false });
-const customFetch = (url, options = {}) => nodeFetch(url, { ...options, agent });
-
-function getSB() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
-    global: { fetch: customFetch },
+// Cliente HTTP direto para o Supabase REST API — sem usar fetch
+function sbAxios() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  return axios.create({
+    baseURL: `${url}/rest/v1`,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    timeout: 10000,
   });
 }
 
+// SELECT — retorna array de rows
+async function dbSelect(table, query = '') {
+  const { data } = await sbAxios().get(`/${table}${query}`);
+  return data || [];
+}
+
+// INSERT — retorna o row inserido
+async function dbInsert(table, body) {
+  const { data } = await sbAxios().post(`/${table}`, body);
+  return Array.isArray(data) ? data[0] : data;
+}
+
+// UPSERT — insere ou atualiza
+async function dbUpsert(table, body) {
+  const { data } = await sbAxios().post(`/${table}`, body, {
+    headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+  });
+  return Array.isArray(data) ? data[0] : data;
+}
+
+// UPDATE — atualiza por filtro ex: 'id=eq.uuid'
+async function dbUpdate(table, filter, body) {
+  const { data } = await sbAxios().patch(`/${table}?${filter}`, body);
+  return data;
+}
+
+// DELETE por filtro
+async function dbDelete(table, filter) {
+  await sbAxios().delete(`/${table}?${filter}`);
+}
+
+// COUNT — retorna número de rows
+async function dbCount(table, query = '') {
+  const inst = sbAxios();
+  const { data } = await inst.get(`/${table}${query}`, {
+    headers: { ...inst.defaults.headers, Prefer: 'count=exact' },
+  });
+  return Array.isArray(data) ? data.length : 0;
+}
+
+// Configurações
 async function getSettings() {
-  const { data, error } = await getSB().from('settings').select('key, value');
-  if (error) throw new Error(`Supabase erro ao ler settings: ${error.message}`);
-  if (!data || data.length === 0) throw new Error('Tabela settings vazia — execute a migration 001_init.sql no Supabase');
-  return Object.fromEntries(data.map(r => [r.key, r.value]));
+  const rows = await dbSelect('settings', '?select=key,value');
+  if (!rows.length) throw new Error('Tabela settings vazia — execute migrations/001_init.sql no Supabase');
+  return Object.fromEntries(rows.map(r => [r.key, r.value]));
 }
 
 async function setSetting(key, value) {
-  await getSB().from('settings').upsert({ key, value: String(value ?? '') });
+  await dbUpsert('settings', { key, value: String(value ?? '') });
 }
 
 async function addLog(level, type, message, details = null) {
   try {
-    await getSB().from('logs').insert({ level, type, message, details: details || null });
+    await dbInsert('logs', { level, type, message, details: details || null });
   } catch (_) {}
 }
 
@@ -59,4 +103,7 @@ function parseSuitPayDate(dateStr) {
   } catch { return null; }
 }
 
-module.exports = { getSB, getSettings, setSetting, addLog, authenticate, setCors, parseSuitPayDate };
+module.exports = {
+  dbSelect, dbInsert, dbUpsert, dbUpdate, dbDelete, dbCount,
+  getSettings, setSetting, addLog, authenticate, setCors, parseSuitPayDate,
+};

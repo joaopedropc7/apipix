@@ -32,7 +32,7 @@ module.exports = async (req, res) => {
 
     if (action === 'server') {
       await setSetting('server_base_url', data.serverBaseUrl || '');
-      await addLog('info', 'settings', `URL Base atualizada: ${data.serverBaseUrl}`);
+      await addLog('info', 'settings', `URL Base atualizada`);
       return res.status(200).json({ ok: true });
     }
 
@@ -51,7 +51,7 @@ module.exports = async (req, res) => {
       if ((data.newPassword || '').length < 6) return res.status(400).json({ error: 'Mínimo 6 caracteres' });
       const hash = await bcrypt.hash(data.newPassword, 10);
       await setSetting('admin_password_hash', hash);
-      await addLog('info', 'settings', 'Senha do admin alterada');
+      await addLog('info', 'settings', 'Senha alterada');
       return res.status(200).json({ ok: true });
     }
   }
