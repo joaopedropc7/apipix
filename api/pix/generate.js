@@ -33,8 +33,9 @@ module.exports = async (req, res) => {
   const windowStart = new Date(Date.now() - DUPLICATE_WINDOW_MINUTES * 60 * 1000).toISOString();
   const document = body.client.document.replace(/\D/g, ''); // remove pontuação
 
+  const amount = parseFloat(body.amount);
   const recent = await dbSelect('transactions',
-    `?client_document=eq.${document}&status=eq.pending&created_at=gte.${windowStart}&limit=1`
+    `?client_document=eq.${document}&amount=eq.${amount}&status=eq.pending&created_at=gte.${windowStart}&limit=1`
   );
 
   if (recent.length > 0) {
