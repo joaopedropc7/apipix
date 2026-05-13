@@ -13,9 +13,9 @@ api.interceptors.response.use(
 );
 
 export const auth = {
-  login: (u, p) => api.post('/auth/login', { username: u, password: p }),
-  logout: () => api.post('/auth/logout'),
-  me: () => api.get('/auth/me'),
+  login: (u, p) => api.post('/auth?action=login', { username: u, password: p }),
+  logout: () => api.post('/auth?action=logout'),
+  me: () => api.get('/auth?action=me'),
 };
 export const getDashboard = () => api.get('/dashboard');
 export const getTransactions = (p) => api.get('/transactions', { params: p });
