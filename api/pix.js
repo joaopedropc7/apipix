@@ -1,6 +1,7 @@
 const axios = require('axios');
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const { dbInsert, dbSelect, getSettings, addLog, setCors, sendToUtmify } = require('./_helpers');
+const { dbInsert, dbSelect, dbUpdate, getSettings, addLog, setCors, sendToUtmify } = require('./_helpers');
 
 module.exports = async (req, res) => {
   setCors(res);
@@ -56,18 +57,20 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes', required: ['amount', 'client.name', 'client.document'] });
     }
 
-    // Validação de duplicidade: mesmo documento + mesmo valor com PIX pendente nos últimos 5 min
-    const DUPLICATE_WINDOW_MINUTES = 5;
-    const windowStart = new Date(Date.now() - DUPLICATE_WINDOW_MINUTES * 60 * 1000).toISOString();
     const document = body.client.document.replace(/\D/g, '');
-    const amount = parseFloat(body.amount);
+    const amount   = parseFloat(body.amount);
 
-    const recent = await dbSelect('transactions',
-      `?client_document=eq.${document}&amount=eq.${amount}&status=eq.pending&created_at=gte.${windowStart}&limit=1`
-    );
+    // Gera dedup_key baseada em janela de 5 minutos — muda a cada 5 min
+    const WINDOW_MINUTES = 5;
+    const windowSlot = Math.floor(Date.now() / (WINDOW_MINUTES * 60 * 1000));
+    const dedupKey = crypto.createHash('sha256')
+      .update(`${document}-${amount}-${windowSlot}`)
+      .digest('hex').slice(0, 40);
 
-    if (recent.length > 0) {
-      const dup = recent[0];
+    // Verifica se já existe PIX com essa dedup_key (caso normal ou race condition já resolvida)
+    const existing = await dbSelect('transactions', `?dedup_key=eq.${dedupKey}&limit=1`);
+    if (existing.length > 0) {
+      const dup = existing[0];
       return res.status(200).json({
         idTransaction:     dup.id_transaction,
         paymentCode:       dup.payment_code,
@@ -90,6 +93,46 @@ module.exports = async (req, res) => {
     const serverBase = settings.server_base_url?.trim().replace(/\/$/, '');
     body.callbackUrl = serverBase ? `${serverBase}/api/webhook/suitpay` : '';
 
+    // Reserva o slot no banco com dedup_key — bloqueia race condition no nível do PostgreSQL
+    let reserved;
+    try {
+      reserved = await dbInsert('transactions', {
+        request_number:  body.requestNumber,
+        dedup_key:       dedupKey,
+        amount,
+        shipping_amount: parseFloat(body.shippingAmount) || 0,
+        discount_amount: parseFloat(body.discountAmount) || 0,
+        client_name:     body.client.name,
+        client_document: document,
+        client_email:    body.client.email    || null,
+        client_phone:    body.client.phoneNumber || null,
+        due_date:        body.dueDate,
+        status:          'generating',
+        callback_url:    body.callbackUrl || null,
+        username_checkout: body.usernameCheckout || null,
+        raw_request:     body,
+      });
+    } catch (err) {
+      // Unique constraint violada — outra requisição simultânea ganhou a corrida
+      if (err.response?.status === 409 || err.response?.data?.code === '23505') {
+        const rows = await dbSelect('transactions', `?dedup_key=eq.${dedupKey}&limit=1`);
+        if (rows.length > 0) {
+          const dup = rows[0];
+          return res.status(200).json({
+            idTransaction:     dup.id_transaction,
+            paymentCode:       dup.payment_code,
+            paymentCodeBase64: dup.payment_code_base64,
+            response:          'OK',
+            _id:               dup.id,
+            requestNumber:     dup.request_number,
+            callbackUrl:       dup.callback_url,
+            _duplicate:        true,
+          });
+        }
+      }
+      throw err;
+    }
+
     const baseUrl = settings.suitpay_environment === 'production'
       ? 'https://ws.suitpay.app'
       : 'https://sandbox.ws.suitpay.app';
@@ -100,30 +143,31 @@ module.exports = async (req, res) => {
         timeout: 30000,
       });
 
-      const inserted = await dbInsert('transactions', {
-        request_number: body.requestNumber, id_transaction: data.idTransaction || null,
-        amount: parseFloat(body.amount), shipping_amount: parseFloat(body.shippingAmount) || 0,
-        discount_amount: parseFloat(body.discountAmount) || 0,
-        client_name: body.client.name, client_document: document,
-        client_email: body.client.email || null, client_phone: body.client.phoneNumber || null,
-        due_date: body.dueDate, status: 'pending',
-        payment_code: data.paymentCode || null, payment_code_base64: data.paymentCodeBase64 || null,
-        callback_url: body.callbackUrl || null, username_checkout: body.usernameCheckout || null,
-        raw_request: body, raw_response: data,
+      // Atualiza o registro reservado com os dados reais do SuitPay
+      await dbUpdate('transactions', `id=eq.${reserved.id}`, {
+        id_transaction:      data.idTransaction || null,
+        status:              'pending',
+        payment_code:        data.paymentCode || null,
+        payment_code_base64: data.paymentCodeBase64 || null,
+        raw_response:        data,
       });
 
-      await addLog('info', 'api', `QR Code gerado: ${body.requestNumber}`, { idTransaction: data.idTransaction, callbackUrl: body.callbackUrl });
-      await sendToUtmify(inserted, 'waiting_payment', null);
+      await addLog('info', 'api', `QR Code gerado: ${body.requestNumber}`, { idTransaction: data.idTransaction });
+      await sendToUtmify({ ...reserved, id_transaction: data.idTransaction }, 'waiting_payment', null);
 
-      return res.status(200).json({ ...data, _id: inserted?.id, requestNumber: body.requestNumber, callbackUrl: body.callbackUrl });
+      return res.status(200).json({
+        ...data,
+        _id:           reserved.id,
+        requestNumber: body.requestNumber,
+        callbackUrl:   body.callbackUrl,
+      });
 
     } catch (err) {
       const errData = err.response?.data || { message: err.message };
       await addLog('error', 'api', `Erro ao gerar QR Code: ${body.requestNumber}`, errData);
-      await dbInsert('transactions', {
-        request_number: body.requestNumber, amount: parseFloat(body.amount) || 0,
-        client_name: body.client?.name || 'N/A', client_document: document,
-        due_date: body.dueDate || '', status: 'error', raw_request: body, raw_response: errData,
+      await dbUpdate('transactions', `id=eq.${reserved.id}`, {
+        status:       'error',
+        raw_response: errData,
       }).catch(() => {});
       return res.status(err.response?.status || 500).json(errData);
     }
