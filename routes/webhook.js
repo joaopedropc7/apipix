@@ -32,10 +32,12 @@ router.post('/webhook/suitpay', async (req, res) => {
 
   // Salva webhook bruto
   if (sb) {
-    await sb.from('webhooks').insert({
-      id_transaction: payload.idTransaction || null,
-      payload,
-    }).catch(() => {});
+    try {
+      await sb.from('webhooks').insert({
+        id_transaction: payload.idTransaction || null,
+        payload,
+      });
+    } catch (_) {}
   }
 
   const idTransaction  = payload.idTransaction;
