@@ -1,0 +1,125 @@
+<%- include('partials/head') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+
+<div class="main-content">
+  <div class="top-bar">
+    <div>
+      <div class="page-title">Transações</div>
+      <div class="page-sub"><%= total %> transação(ões) encontrada(s)</div>
+    </div>
+    <a href="/transactions/new" class="btn-primary-custom">
+      <i class="bi bi-plus-lg"></i> Nova Transação
+    </a>
+  </div>
+
+  <div class="content-area">
+    <% if (supabaseWarning) { %>
+      <div class="alert alert-danger alert-custom d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-database-x fs-5"></i>
+        <div>Supabase não configurado. <a href="/settings" class="fw-semibold">Configurar agora</a></div>
+      </div>
+    <% } %>
+    <!-- Filters -->
+    <div class="card-panel mb-4">
+      <div class="card-panel-body">
+        <form method="GET" action="/transactions" class="row g-2 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label">Buscar</label>
+            <input type="text" name="search" class="form-control" placeholder="Nome, CPF/CNPJ ou número do pedido..." value="<%= search %>">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+              <option value="">Todos</option>
+              <option value="pending" <%= status==='pending'?'selected':'' %>>Pendente</option>
+              <option value="paid" <%= status==='paid'?'selected':'' %>>Paga</option>
+              <option value="cancelled" <%= status==='cancelled'?'selected':'' %>>Cancelada</option>
+              <option value="expired" <%= status==='expired'?'selected':'' %>>Expirada</option>
+              <option value="error" <%= status==='error'?'selected':'' %>>Erro</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn-primary-custom w-100">
+              <i class="bi bi-search"></i> Filtrar
+            </button>
+          </div>
+          <div class="col-md-2">
+            <a href="/transactions" class="btn-outline-custom w-100">Limpar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card-panel">
+      <div class="table-wrapper">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>ID Transação</th>
+              <th>Cliente</th>
+              <th>Valor</th>
+              <th>Vencimento</th>
+              <th>Status</th>
+              <th>Criado em</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (transactions.length === 0) { %>
+              <tr><td colspan="8" class="text-center text-muted py-5">
+                <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.3"></i>
+                Nenhuma transação encontrada
+              </td></tr>
+            <% } %>
+            <% transactions.forEach(tx => { %>
+            <tr>
+              <td><span class="fw-semibold">#<%= tx.request_number %></span></td>
+              <td class="text-muted" style="font-size:0.8rem"><%= tx.id_transaction || '-' %></td>
+              <td>
+                <div class="fw-medium"><%= tx.client_name %></div>
+                <div class="text-muted" style="font-size:0.75rem"><%= tx.client_document %></div>
+              </td>
+              <td class="fw-semibold">R$ <%= (tx.amount||0).toFixed(2).replace('.',',') %></td>
+              <td class="text-muted"><%= tx.due_date %></td>
+              <td>
+                <span class="badge-status badge-<%= tx.status %>">
+                  <%= tx.status === 'pending' ? 'Pendente' : tx.status === 'paid' ? 'Paga' : tx.status === 'cancelled' ? 'Cancelada' : tx.status === 'expired' ? 'Expirada' : tx.status === 'error' ? 'Erro' : tx.status %>
+                </span>
+              </td>
+              <td class="text-muted" style="font-size:0.8rem"><%= tx.created_at ? new Date(tx.created_at).toLocaleString('pt-BR') : '-' %></td>
+              <td>
+                <a href="/transactions/<%= tx.id %>" class="btn btn-sm btn-light" title="Ver detalhes">
+                  <i class="bi bi-eye"></i>
+                </a>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <% if (pages > 1) { %>
+      <div class="d-flex justify-content-center p-3">
+        <div class="pagination-custom">
+          <a href="?page=<%= page-1 %>&status=<%= status %>&search=<%= search %>" class="page-btn <%= page<=1?'disabled':'' %>">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+          <% for(let i=Math.max(1,page-2); i<=Math.min(pages,page+2); i++) { %>
+            <a href="?page=<%= i %>&status=<%= status %>&search=<%= search %>" class="page-btn <%= i===page?'active':'' %>"><%= i %></a>
+          <% } %>
+          <a href="?page=<%= page+1 %>&status=<%= status %>&search=<%= search %>" class="page-btn <%= page>=pages?'disabled':'' %>">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+</body>
+</html>

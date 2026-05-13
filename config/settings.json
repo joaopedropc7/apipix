@@ -1,0 +1,11 @@
+{
+  "adminUser": "admin",
+  "adminPasswordHash": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+  "suitpay": {
+    "ci": "painel02_1778615527762",
+    "cs": "273095f546106eb3aafcfd72a4cc45b160a72ba6fcd5701a0034e0315c79f00732aea1c1c59a49c3abdc4a7af79050a4",
+    "environment": "production"
+  },
+  "serverBaseUrl": "",
+  "apiKey": "d6bf02135b3c4fd29c9b280c057b5512"
+}

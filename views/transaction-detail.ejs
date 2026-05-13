@@ -1,0 +1,234 @@
+<%- include('partials/head') %>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+
+<div class="main-content">
+  <div class="top-bar">
+    <div>
+      <div class="page-title">Transação #<%= tx.request_number %></div>
+      <div class="page-sub">Detalhes da transação PIX</div>
+    </div>
+    <div class="d-flex gap-2">
+      <% if (tx.status === 'pending') { %>
+      <form method="POST" action="/transactions/<%= tx.id %>/cancel" onsubmit="return confirm('Cancelar esta transação?')">
+        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x-circle me-1"></i>Cancelar</button>
+      </form>
+      <% } %>
+      <a href="/transactions" class="btn-outline-custom"><i class="bi bi-arrow-left"></i> Voltar</a>
+    </div>
+  </div>
+
+  <div class="content-area">
+    <div class="row g-3">
+
+      <!-- QR Code -->
+      <div class="col-lg-4">
+        <div class="card-panel mb-3">
+          <div class="card-panel-header">
+            <span class="card-panel-title"><i class="bi bi-qr-code me-2 text-primary"></i>QR Code PIX</span>
+          </div>
+          <div class="card-panel-body text-center">
+            <% if (tx.payment_code_base64) { %>
+              <%
+                const b64 = tx.payment_code_base64;
+                const imgSrc = b64.startsWith('data:') ? b64 : 'data:image/png;base64,' + b64;
+              %>
+              <img src="<%= imgSrc %>" alt="QR Code PIX"
+                class="img-fluid rounded"
+                style="max-width:210px;border:8px solid #fff;box-shadow:0 4px 20px rgba(0,0,0,0.12)">
+              <div class="mt-3 mb-1 fw-semibold text-muted" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">PIX Copia e Cola</div>
+              <div class="pix-code-box" onclick="copyCode(this)" title="Clique para copiar">
+                <%= tx.payment_code %>
+              </div>
+              <div class="text-muted mt-2" style="font-size:0.75rem">
+                <i class="bi bi-clipboard me-1"></i>Clique para copiar o código
+              </div>
+            <% } else { %>
+              <div class="py-4 text-muted text-center">
+                <i class="bi bi-exclamation-circle" style="font-size:3rem;display:block;margin-bottom:1rem;opacity:0.25"></i>
+                QR Code não disponível
+                <% if (tx.status === 'error') { %>
+                  <div class="text-danger mt-1" style="font-size:0.82rem">Falha ao gerar na SuitPay</div>
+                <% } %>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Status / Valores -->
+        <div class="card-panel">
+          <div class="card-panel-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <span class="text-muted fw-semibold" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">STATUS</span>
+              <span class="badge-status badge-<%= tx.status %>">
+                <% if (tx.status === 'pending') { %>Pendente
+                <% } else if (tx.status === 'paid') { %>Paga
+                <% } else if (tx.status === 'cancelled') { %>Cancelada
+                <% } else if (tx.status === 'expired') { %>Expirada
+                <% } else if (tx.status === 'error') { %>Erro
+                <% } else { %><%= tx.status %><% } %>
+              </span>
+            </div>
+            <div class="d-flex justify-content-between mb-2" style="font-size:0.875rem">
+              <span class="text-muted">Valor</span>
+              <span class="fw-bold">R$ <%= (tx.amount||0).toFixed(2).replace('.',',') %></span>
+            </div>
+            <% if (tx.shipping_amount > 0) { %>
+            <div class="d-flex justify-content-between mb-2" style="font-size:0.875rem">
+              <span class="text-muted">Frete</span>
+              <span>R$ <%= (tx.shipping_amount||0).toFixed(2).replace('.',',') %></span>
+            </div>
+            <% } %>
+            <% if (tx.discount_amount > 0) { %>
+            <div class="d-flex justify-content-between mb-2" style="font-size:0.875rem">
+              <span class="text-muted">Desconto</span>
+              <span class="text-success">-R$ <%= (tx.discount_amount||0).toFixed(2).replace('.',',') %></span>
+            </div>
+            <% } %>
+            <div style="border-top:1px solid var(--border)" class="pt-2 mt-1 d-flex justify-content-between" style="font-size:0.875rem">
+              <span class="fw-semibold">Vencimento</span>
+              <span class="fw-semibold"><%= tx.due_date %></span>
+            </div>
+            <% if (tx.payment_date) { %>
+            <div class="pt-2 mt-1 d-flex justify-content-between" style="font-size:0.875rem">
+              <span class="text-muted">Data do Pagamento</span>
+              <span class="text-success fw-semibold"><%= new Date(tx.payment_date).toLocaleString('pt-BR') %></span>
+            </div>
+            <% } %>
+            <% if (tx.paid_value) { %>
+            <div class="pt-2 mt-1 d-flex justify-content-between" style="font-size:0.875rem">
+              <span class="text-muted">Valor Pago</span>
+              <span class="text-success fw-semibold">R$ <%= (tx.paid_value||0).toFixed(2).replace('.',',') %></span>
+            </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Details -->
+      <div class="col-lg-8">
+        <div class="card-panel mb-3">
+          <div class="card-panel-header">
+            <span class="card-panel-title"><i class="bi bi-info-circle me-2 text-primary"></i>Informações da Transação</span>
+          </div>
+          <div class="card-panel-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Número do Pedido</div>
+                <div class="fw-semibold">#<%= tx.request_number %></div>
+              </div>
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">ID SuitPay</div>
+                <div class="fw-semibold text-muted" style="font-size:0.85rem;word-break:break-all"><%= tx.id_transaction || '-' %></div>
+              </div>
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Criado em</div>
+                <div><%= tx.created_at ? new Date(tx.created_at).toLocaleString('pt-BR') : '-' %></div>
+              </div>
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Atualizado em</div>
+                <div><%= tx.updated_at ? new Date(tx.updated_at).toLocaleString('pt-BR') : '-' %></div>
+              </div>
+              <% if (tx.callback_url) { %>
+              <div class="col-12">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Webhook URL</div>
+                <code style="font-size:0.8rem;word-break:break-all"><%= tx.callback_url %></code>
+              </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-panel mb-3">
+          <div class="card-panel-header">
+            <span class="card-panel-title"><i class="bi bi-person me-2 text-primary"></i>Cliente (Cobrança)</span>
+          </div>
+          <div class="card-panel-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Nome</div>
+                <div class="fw-semibold"><%= tx.client_name %></div>
+              </div>
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Documento (CPF/CNPJ)</div>
+                <div><%= tx.client_document %></div>
+              </div>
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">E-mail</div>
+                <div><%= tx.client_email || '-' %></div>
+              </div>
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Telefone</div>
+                <div><%= tx.client_phone || '-' %></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <% if (tx.payer_name || tx.payer_tax_id) { %>
+        <div class="card-panel mb-3" style="border-left: 4px solid #10b981">
+          <div class="card-panel-header">
+            <span class="card-panel-title"><i class="bi bi-person-check me-2 text-success"></i>Pagador (via Webhook)</span>
+          </div>
+          <div class="card-panel-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">Nome do Pagador</div>
+                <div class="fw-semibold"><%= tx.payer_name || '-' %></div>
+              </div>
+              <div class="col-md-6">
+                <div class="text-muted mb-1" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">CPF/CNPJ do Pagador</div>
+                <div><%= tx.payer_tax_id || '-' %></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <% } %>
+
+        <% if (tx.raw_response && tx.status !== 'error') { %>
+        <div class="card-panel">
+          <div class="card-panel-header">
+            <span class="card-panel-title"><i class="bi bi-code-slash me-2 text-primary"></i>Resposta SuitPay</span>
+          </div>
+          <div class="card-panel-body">
+            <%
+              let displayResponse = tx.raw_response;
+              if (typeof displayResponse === 'object') {
+                const copy = Object.assign({}, displayResponse);
+                if (copy.paymentCodeBase64) copy.paymentCodeBase64 = '[BASE64_OMITIDO]';
+                displayResponse = copy;
+              }
+            %>
+            <pre class="bg-light p-3 rounded m-0" style="font-size:0.78rem;max-height:200px;overflow-y:auto"><%= typeof displayResponse === 'string' ? displayResponse : JSON.stringify(displayResponse, null, 2) %></pre>
+          </div>
+        </div>
+        <% } %>
+
+        <% if (tx.status === 'error' && tx.raw_response) { %>
+        <div class="card-panel border-danger" style="border-color:#ef4444!important">
+          <div class="card-panel-header">
+            <span class="card-panel-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Erro SuitPay</span>
+          </div>
+          <div class="card-panel-body">
+            <pre class="bg-light p-3 rounded m-0" style="font-size:0.78rem;max-height:200px;overflow-y:auto"><%= typeof tx.raw_response === 'string' ? tx.raw_response : JSON.stringify(tx.raw_response, null, 2) %></pre>
+          </div>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function copyCode(el) {
+  navigator.clipboard.writeText(el.innerText.trim()).then(() => {
+    const orig = el.style.background;
+    el.style.background = '#d1fae5';
+    el.style.color = '#065f46';
+    setTimeout(() => { el.style.background = orig; el.style.color = ''; }, 1500);
+  });
+}
+</script>
+</body>
+</html>

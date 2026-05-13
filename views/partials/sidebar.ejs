@@ -1,0 +1,40 @@
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-mark"><i class="bi bi-qr-code-scan"></i></div>
+    <div class="logo-text">
+      <span class="logo-title">PIX Admin</span>
+      <span class="logo-sub">SuitPay Integration</span>
+    </div>
+  </div>
+
+  <div class="sidebar-nav">
+    <div class="nav-label">MENU</div>
+    <a href="/dashboard" class="nav-item <%= active === 'dashboard' ? 'active' : '' %>">
+      <i class="bi bi-grid-1x2"></i><span>Dashboard</span>
+    </a>
+    <a href="/transactions" class="nav-item <%= active === 'transactions' ? 'active' : '' %>">
+      <i class="bi bi-arrow-left-right"></i><span>Transações</span>
+    </a>
+    <div class="nav-label mt-3">SISTEMA</div>
+    <a href="/settings" class="nav-item <%= active === 'settings' ? 'active' : '' %>">
+      <i class="bi bi-gear"></i><span>Configurações</span>
+    </a>
+    <a href="/docs" class="nav-item <%= active === 'docs' ? 'active' : '' %>">
+      <i class="bi bi-book"></i><span>Documentação</span>
+    </a>
+    <a href="/logs" class="nav-item <%= active === 'logs' ? 'active' : '' %>">
+      <i class="bi bi-terminal"></i><span>Logs</span>
+    </a>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar"><i class="bi bi-person-fill"></i></div>
+      <div class="user-details">
+        <span class="user-name"><%= user.username %></span>
+        <span class="user-role">Administrador</span>
+      </div>
+    </div>
+    <a href="/logout" class="btn-logout" title="Sair"><i class="bi bi-box-arrow-right"></i></a>
+  </div>
+</nav>
