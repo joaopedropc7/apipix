@@ -16,8 +16,9 @@ export default function Login() {
     try {
       await login(form.username, form.password);
       navigate('/dashboard');
-    } catch {
-      setError('Usuário ou senha inválidos.');
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Erro ao conectar com o servidor.';
+      setError(msg);
     } finally { setLoading(false); }
   };
 
