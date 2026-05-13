@@ -13,6 +13,7 @@
     "cookie": "^0.7.0",
     "dotenv": "^17.4.2",
     "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^2.7.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

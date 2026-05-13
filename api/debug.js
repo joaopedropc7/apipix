@@ -1,5 +1,6 @@
 require('dotenv').config({ override: true });
 const { createClient } = require('@supabase/supabase-js');
+const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
   const result = {
@@ -19,7 +20,9 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+      global: { fetch },
+    });
     const { data, error } = await sb.from('settings').select('key');
 
     if (error) {

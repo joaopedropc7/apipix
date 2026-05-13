@@ -1,10 +1,13 @@
 require('dotenv').config({ override: true });
 const { createClient } = require('@supabase/supabase-js');
+const fetch = require('node-fetch');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 
 function getSB() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+    global: { fetch },
+  });
 }
 
 async function getSettings() {

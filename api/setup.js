@@ -1,6 +1,7 @@
 require('dotenv').config({ override: true });
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
+const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -11,7 +12,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, { global: { fetch } });
     const hash = await bcrypt.hash('password', 10);
 
     const rows = [
