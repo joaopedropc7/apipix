@@ -158,6 +158,38 @@ export default function TransactionDetail() {
               </div>
             </div>
 
+            {(() => {
+              const utm = tx.raw_request?.trackingParameters;
+              const hasUtm = utm && Object.values(utm).some(v => v);
+              if (!hasUtm) return null;
+              const fields = [
+                ['utm_source',   utm.utm_source],
+                ['utm_campaign', utm.utm_campaign],
+                ['utm_medium',   utm.utm_medium],
+                ['utm_content',  utm.utm_content],
+                ['utm_term',     utm.utm_term],
+                ['src',          utm.src],
+                ['sck',          utm.sck],
+              ].filter(([, v]) => v);
+              return (
+                <div className="card-panel mb-3">
+                  <div className="card-panel-header">
+                    <span className="card-panel-title"><i className="bi bi-graph-up-arrow me-2 text-primary" />Parâmetros UTM</span>
+                  </div>
+                  <div className="card-panel-body">
+                    <div className="row g-3">
+                      {fields.map(([label, value]) => (
+                        <div key={label} className="col-md-6">
+                          <div className="text-muted small fw-semibold text-uppercase mb-1" style={{ fontSize: '.72rem', letterSpacing: '.05em' }}>{label}</div>
+                          <div style={{ fontSize: '.875rem', wordBreak: 'break-all' }}>{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {(tx.payer_name || tx.payer_tax_id) && (
               <div className="card-panel" style={{ borderLeft: '4px solid #10b981' }}>
                 <div className="card-panel-header"><span className="card-panel-title text-success"><i className="bi bi-person-check me-2" />Pagador (via Webhook)</span></div>
