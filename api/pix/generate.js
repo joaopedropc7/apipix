@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
-const { dbInsert, getSettings, addLog, setCors, sendToUtmify } = require('../_helpers');
+const { dbInsert, dbSelect, getSettings, addLog, setCors, sendToUtmify } = require('../_helpers');
 
 module.exports = async (req, res) => {
   setCors(res);
@@ -25,6 +25,29 @@ module.exports = async (req, res) => {
     return res.status(400).json({
       error: 'Campos obrigatórios ausentes',
       required: ['amount', 'client.name', 'client.document'],
+    });
+  }
+
+  // Valida duplicidade: mesmo documento com PIX pendente nos últimos 5 minutos
+  const DUPLICATE_WINDOW_MINUTES = 5;
+  const windowStart = new Date(Date.now() - DUPLICATE_WINDOW_MINUTES * 60 * 1000).toISOString();
+  const document = body.client.document.replace(/\D/g, ''); // remove pontuação
+
+  const recent = await dbSelect('transactions',
+    `?client_document=eq.${document}&status=eq.pending&created_at=gte.${windowStart}&limit=1`
+  );
+
+  if (recent.length > 0) {
+    const dup = recent[0];
+    return res.status(409).json({
+      error: `Já existe um PIX pendente para este cliente gerado há menos de ${DUPLICATE_WINDOW_MINUTES} minutos.`,
+      existing: {
+        id:            dup.id,
+        requestNumber: dup.request_number,
+        amount:        dup.amount,
+        paymentCode:   dup.payment_code,
+        createdAt:     dup.created_at,
+      },
     });
   }
 
