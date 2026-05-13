@@ -1,12 +1,17 @@
 require('dotenv').config({ override: true });
 const { createClient } = require('@supabase/supabase-js');
-const fetch = require('node-fetch');
+const nodeFetch = require('node-fetch');
+const https = require('https');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 
+// Usa node-fetch com agente https que ignora problemas de SSL
+const agent = new https.Agent({ rejectUnauthorized: false });
+const customFetch = (url, options = {}) => nodeFetch(url, { ...options, agent });
+
 function getSB() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
-    global: { fetch },
+    global: { fetch: customFetch },
   });
 }
 
