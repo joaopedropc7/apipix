@@ -1,4 +1,4 @@
-const { dbInsert, dbUpdate, dbSelect, addLog, parseSuitPayDate } = require('../_helpers');
+const { dbInsert, dbUpdate, dbSelect, addLog, parseSuitPayDate, sendToUtmify } = require('../_helpers');
 
 const STATUS_MAP = {
   PAID_OUT:   'paid',
@@ -56,6 +56,13 @@ module.exports = async (req, res) => {
   };
 
   await dbUpdate('transactions', `id=eq.${transaction.id}`, update);
+
+  // Notifica Utmify: venda aprovada (somente quando pago)
+  if (newStatus === 'paid') {
+    const paymentDate = parseSuitPayDate(p.paymentDate) || new Date().toISOString();
+    const fullTx = { ...transaction, ...update, raw_request: transaction.raw_request };
+    await sendToUtmify(fullTx, 'paid', paymentDate);
+  }
 
   await addLog('info', 'webhook',
     `Pagamento ${newStatus === 'paid' ? 'CONFIRMADO ✅' : newStatus.toUpperCase()}: pedido #${transaction.request_number}`,

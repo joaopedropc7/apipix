@@ -15,6 +15,7 @@ module.exports = async (req, res) => {
       suitpayEnvironment: s.suitpay_environment || 'sandbox',
       apiKey:             s.api_key || '',
       serverBaseUrl:      s.server_base_url || '',
+      utmifyToken:        s.utmify_token || '',
       supabaseConfigured: !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
     });
   }
@@ -33,6 +34,12 @@ module.exports = async (req, res) => {
     if (action === 'server') {
       await setSetting('server_base_url', data.serverBaseUrl || '');
       await addLog('info', 'settings', `URL Base atualizada`);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'utmify') {
+      await setSetting('utmify_token', data.utmifyToken || '');
+      await addLog('info', 'settings', 'Token Utmify atualizado');
       return res.status(200).json({ ok: true });
     }
 

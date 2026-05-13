@@ -19,7 +19,8 @@ INSERT INTO settings (key, value) VALUES
   ('suitpay_cs',           ''),
   ('suitpay_environment',  'sandbox'),
   ('api_key',              ''),
-  ('server_base_url',      '')
+  ('server_base_url',      ''),
+  ('utmify_token',         '')
 ON CONFLICT (key) DO NOTHING;
 
 -- ----------------------------------------------------------------
@@ -99,3 +100,7 @@ GRANT ALL ON webhooks     TO anon, authenticated;
 
 GRANT USAGE, SELECT ON SEQUENCE logs_id_seq     TO anon, authenticated;
 GRANT USAGE, SELECT ON SEQUENCE webhooks_id_seq TO anon, authenticated;
+
+-- Adicionar utmify_token se já tiver rodado a migration antes
+INSERT INTO settings (key, value) VALUES ('utmify_token', '')
+ON CONFLICT (key) DO NOTHING;

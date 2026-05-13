@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
-const { dbInsert, getSettings, addLog, setCors } = require('../_helpers');
+const { dbInsert, getSettings, addLog, setCors, sendToUtmify } = require('../_helpers');
 
 module.exports = async (req, res) => {
   setCors(res);
@@ -79,6 +79,9 @@ module.exports = async (req, res) => {
       idTransaction: data.idTransaction,
       callbackUrl: body.callbackUrl,
     });
+
+    // Notifica Utmify: venda pendente
+    await sendToUtmify(inserted, 'waiting_payment', null);
 
     return res.status(200).json({
       ...data,

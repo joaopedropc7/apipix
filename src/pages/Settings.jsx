@@ -85,6 +85,27 @@ export default function Settings() {
               </form>
             </div>
 
+            {/* Utmify */}
+            <div className="form-section mb-3">
+              <div className="form-section-title d-flex justify-content-between">
+                <span><i className="bi bi-graph-up-arrow" /> Utmify</span>
+                <span className={`badge ${settings.utmifyToken ? 'bg-success' : 'bg-secondary'}`} style={{ fontSize: '.68rem' }}>
+                  {settings.utmifyToken ? 'Configurado' : 'Não configurado'}
+                </span>
+              </div>
+              <form onSubmit={e => { e.preventDefault(); save('utmify', { utmifyToken: new FormData(e.target).get('utmifyToken') }); }}>
+                <div className="mb-2">
+                  <label className="form-label small fw-semibold text-secondary">Token da credencial de API</label>
+                  <input name="utmifyToken" className="form-control font-monospace" defaultValue={settings.utmifyToken}
+                    placeholder="KVRxalfMiBfm8Rm1nP5YxfwYzArNsA0VLeWC" />
+                  <div className="form-text">Obtenha em: Utmify → Integrações → Webhooks → Credenciais de API</div>
+                </div>
+                <button className="btn-primary-custom" type="submit" disabled={loading.utmify}>
+                  {loading.utmify ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar Token Utmify</>}
+                </button>
+              </form>
+            </div>
+
             {/* API Key */}
             <div className="form-section mb-3">
               <div className="form-section-title"><i className="bi bi-shield-lock" /> API Key</div>

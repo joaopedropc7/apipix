@@ -96,7 +96,84 @@ function parseSuitPayDate(dateStr) {
   } catch { return null; }
 }
 
+function toUtmifyDate(isoDate) {
+  if (!isoDate) return null;
+  try {
+    return new Date(isoDate).toISOString().replace('T', ' ').slice(0, 19);
+  } catch { return null; }
+}
+
+async function sendToUtmify(transaction, status, approvedDate = null) {
+  try {
+    const settings = await getSettings();
+    const token = settings.utmify_token;
+    if (!token) return;
+
+    const raw = transaction.raw_request || {};
+    const tracking = raw.trackingParameters || {};
+    const rawProducts = raw.products || [];
+    const amountCents = Math.round(parseFloat(transaction.amount || 0) * 100);
+
+    const products = rawProducts.length
+      ? rawProducts.map(p => ({
+          id: String(p.description || 'produto').slice(0, 50),
+          name: p.description || 'Produto',
+          planId: null,
+          planName: null,
+          quantity: parseInt(p.quantity) || 1,
+          priceInCents: Math.round(parseFloat(p.value || 0) * 100),
+        }))
+      : [{ id: transaction.request_number, name: 'Produto', planId: null, planName: null, quantity: 1, priceInCents: amountCents }];
+
+    const body = {
+      orderId:       transaction.request_number,
+      platform:      'PIXAdmin',
+      paymentMethod: 'pix',
+      status,
+      createdAt:    toUtmifyDate(transaction.created_at),
+      approvedDate: approvedDate ? toUtmifyDate(approvedDate) : null,
+      refundedAt:   null,
+      customer: {
+        name:     transaction.client_name,
+        email:    transaction.client_email || '',
+        phone:    transaction.client_phone   || null,
+        document: transaction.client_document || null,
+        country:  'BR',
+      },
+      products,
+      trackingParameters: {
+        src:          tracking.src          || null,
+        sck:          tracking.sck          || null,
+        utm_source:   tracking.utm_source   || null,
+        utm_campaign: tracking.utm_campaign || null,
+        utm_medium:   tracking.utm_medium   || null,
+        utm_content:  tracking.utm_content  || null,
+        utm_term:     tracking.utm_term     || null,
+      },
+      commission: {
+        totalPriceInCents:      amountCents,
+        gatewayFeeInCents:      0,
+        userCommissionInCents:  amountCents,
+      },
+      isTest: false,
+    };
+
+    await axios.post('https://api.utmify.com.br/api-credentials/orders', body, {
+      headers: { 'x-api-token': token, 'Content-Type': 'application/json' },
+      timeout: 10000,
+    });
+
+    await addLog('info', 'utmify', `Utmify: ${transaction.request_number} → ${status}`);
+  } catch (err) {
+    await addLog('error', 'utmify',
+      `Erro Utmify: ${transaction.request_number}`,
+      err.response?.data || err.message
+    );
+  }
+}
+
 module.exports = {
   dbSelect, dbInsert, dbUpsert, dbUpdate, dbDelete,
-  getSettings, setSetting, addLog, authenticate, setCors, parseSuitPayDate,
+  getSettings, setSetting, addLog, authenticate, setCors,
+  parseSuitPayDate, toUtmifyDate, sendToUtmify,
 };
