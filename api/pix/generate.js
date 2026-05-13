@@ -9,24 +9,33 @@ module.exports = async (req, res) => {
 
   const settings = await getSettings();
 
+  // Valida API Key
   const apiKey = req.headers['api-key'] || req.headers['x-api-key'];
   if (!settings.api_key || apiKey !== settings.api_key) {
     return res.status(401).json({ error: 'API Key inválida ou ausente. Envie no header: api-key' });
   }
 
   if (!settings.suitpay_ci || !settings.suitpay_cs) {
-    return res.status(503).json({ error: 'Credenciais SuitPay não configuradas' });
+    return res.status(503).json({ error: 'Credenciais SuitPay não configuradas no painel admin' });
   }
 
   const body = req.body;
+
   if (!body.dueDate || !body.amount || !body.client?.name || !body.client?.document) {
-    return res.status(400).json({ error: 'Campos obrigatórios: dueDate, amount, client.name, client.document' });
+    return res.status(400).json({
+      error: 'Campos obrigatórios ausentes',
+      required: ['dueDate', 'amount', 'client.name', 'client.document'],
+    });
   }
 
+  // Sempre gera requestNumber se não enviado
   if (!body.requestNumber) body.requestNumber = uuidv4().slice(0, 8);
-  if (!body.callbackUrl && settings.server_base_url) {
-    body.callbackUrl = `${settings.server_base_url.replace(/\/$/, '')}/api/webhook/suitpay`;
-  }
+
+  // Sempre usa a URL de webhook do próprio sistema — ignora qualquer callbackUrl do body
+  const serverBase = settings.server_base_url?.trim().replace(/\/$/, '');
+  body.callbackUrl = serverBase
+    ? `${serverBase}/api/webhook/suitpay`
+    : '';
 
   const baseUrl = settings.suitpay_environment === 'production'
     ? 'https://ws.suitpay.app'
@@ -36,32 +45,63 @@ module.exports = async (req, res) => {
     const { data } = await axios.post(
       `${baseUrl}/api/v1/gateway/request-qrcode`,
       body,
-      { headers: { ci: settings.suitpay_ci, cs: settings.suitpay_cs, 'Content-Type': 'application/json' }, timeout: 30000 }
+      {
+        headers: {
+          ci: settings.suitpay_ci,
+          cs: settings.suitpay_cs,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
+      }
     );
 
     const inserted = await dbInsert('transactions', {
-      request_number: body.requestNumber, id_transaction: data.idTransaction || null,
-      amount: parseFloat(body.amount), shipping_amount: parseFloat(body.shippingAmount) || 0,
-      discount_amount: parseFloat(body.discountAmount) || 0,
-      client_name: body.client.name, client_document: body.client.document,
-      client_email: body.client.email || null, client_phone: body.client.phoneNumber || null,
-      due_date: body.dueDate, status: 'pending',
-      payment_code: data.paymentCode || null, payment_code_base64: data.paymentCodeBase64 || null,
-      callback_url: body.callbackUrl || null, username_checkout: body.usernameCheckout || null,
-      raw_request: body, raw_response: data,
+      request_number:      body.requestNumber,
+      id_transaction:      data.idTransaction || null,
+      amount:              parseFloat(body.amount),
+      shipping_amount:     parseFloat(body.shippingAmount) || 0,
+      discount_amount:     parseFloat(body.discountAmount) || 0,
+      client_name:         body.client.name,
+      client_document:     body.client.document,
+      client_email:        body.client.email || null,
+      client_phone:        body.client.phoneNumber || null,
+      due_date:            body.dueDate,
+      status:              'pending',
+      payment_code:        data.paymentCode || null,
+      payment_code_base64: data.paymentCodeBase64 || null,
+      callback_url:        body.callbackUrl || null,
+      username_checkout:   body.usernameCheckout || null,
+      raw_request:         body,
+      raw_response:        data,
     });
 
-    await addLog('info', 'api', `QR Code gerado: ${body.requestNumber}`, { idTransaction: data.idTransaction });
-    return res.status(200).json({ ...data, _id: inserted?.id });
+    await addLog('info', 'api', `QR Code gerado: ${body.requestNumber}`, {
+      idTransaction: data.idTransaction,
+      callbackUrl: body.callbackUrl,
+    });
+
+    return res.status(200).json({
+      ...data,
+      _id:            inserted?.id,
+      requestNumber:  body.requestNumber,
+      callbackUrl:    body.callbackUrl,
+    });
 
   } catch (err) {
     const errData = err.response?.data || { message: err.message };
     await addLog('error', 'api', `Erro ao gerar QR Code: ${body.requestNumber}`, errData);
+
     await dbInsert('transactions', {
-      request_number: body.requestNumber, amount: parseFloat(body.amount) || 0,
-      client_name: body.client?.name || 'N/A', client_document: body.client?.document || 'N/A',
-      due_date: body.dueDate || '', status: 'error', raw_request: body, raw_response: errData,
+      request_number:  body.requestNumber,
+      amount:          parseFloat(body.amount) || 0,
+      client_name:     body.client?.name || 'N/A',
+      client_document: body.client?.document || 'N/A',
+      due_date:        body.dueDate || '',
+      status:          'error',
+      raw_request:     body,
+      raw_response:    errData,
     }).catch(() => {});
+
     return res.status(err.response?.status || 500).json(errData);
   }
 };
