@@ -97,6 +97,6 @@ function parseSuitPayDate(dateStr) {
 }
 
 module.exports = {
-  dbSelect, dbInsert, dbUpsert, dbUpdate, dbDelete, dbCount,
+  dbSelect, dbInsert, dbUpsert, dbUpdate, dbDelete,
   getSettings, setSetting, addLog, authenticate, setCors, parseSuitPayDate,
 };
