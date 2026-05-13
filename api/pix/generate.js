@@ -39,15 +39,15 @@ module.exports = async (req, res) => {
 
   if (recent.length > 0) {
     const dup = recent[0];
-    return res.status(409).json({
-      error: `Já existe um PIX pendente para este cliente gerado há menos de ${DUPLICATE_WINDOW_MINUTES} minutos.`,
-      existing: {
-        id:            dup.id,
-        requestNumber: dup.request_number,
-        amount:        dup.amount,
-        paymentCode:   dup.payment_code,
-        createdAt:     dup.created_at,
-      },
+    return res.status(200).json({
+      idTransaction:      dup.id_transaction,
+      paymentCode:        dup.payment_code,
+      paymentCodeBase64:  dup.payment_code_base64,
+      response:           'OK',
+      _id:                dup.id,
+      requestNumber:      dup.request_number,
+      callbackUrl:        dup.callback_url,
+      _duplicate:         true,
     });
   }
 
