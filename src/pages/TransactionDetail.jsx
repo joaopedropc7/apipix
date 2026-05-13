@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getTransaction, cancelTransaction } from '../api/client';
 import StatusBadge from '../components/StatusBadge';
 
@@ -8,11 +8,17 @@ const fmtDate = s => s ? new Date(s).toLocaleString('pt-BR') : '-';
 
 export default function TransactionDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [tx, setTx] = useState(null);
+  const [error, setError] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => { getTransaction(id).then(r => setTx(r.data)); }, [id]);
+  useEffect(() => {
+    getTransaction(id)
+      .then(r => setTx(r.data))
+      .catch(err => setError(err.response?.data?.error || 'Erro ao carregar transação'));
+  }, [id]);
 
   const cancel = async () => {
     if (!confirm('Cancelar esta transação?')) return;
@@ -27,6 +33,17 @@ export default function TransactionDetail() {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+
+  if (error) return (
+    <div className="page-loader flex-column gap-3">
+      <div className="alert alert-danger" style={{ borderRadius: '.75rem', border: 'none' }}>
+        <i className="bi bi-exclamation-triangle me-2" />{error}
+      </div>
+      <button className="btn-outline-custom" onClick={() => navigate('/transactions')}>
+        <i className="bi bi-arrow-left" /> Voltar
+      </button>
+    </div>
+  );
 
   if (!tx) return <div className="page-loader"><div className="spinner-border text-primary" /></div>;
 
