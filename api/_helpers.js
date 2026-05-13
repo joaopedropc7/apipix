@@ -2,8 +2,25 @@ const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 
-function getSupabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+let _sb = null;
+function getSB() {
+  if (!_sb) _sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+  return _sb;
+}
+
+async function getSettings() {
+  const { data } = await getSB().from('settings').select('key, value');
+  return Object.fromEntries((data || []).map(r => [r.key, r.value]));
+}
+
+async function setSetting(key, value) {
+  await getSB().from('settings').upsert({ key, value: String(value ?? '') });
+}
+
+async function addLog(level, type, message, details = null) {
+  try {
+    await getSB().from('logs').insert({ level, type, message, details: details || null });
+  } catch (_) {}
 }
 
 function authenticate(req, res) {
@@ -24,21 +41,6 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, api-key');
 }
 
-async function getSettings(sb) {
-  const { data } = await sb.from('settings').select('key, value');
-  return Object.fromEntries((data || []).map(r => [r.key, r.value]));
-}
-
-async function setSetting(sb, key, value) {
-  await sb.from('settings').upsert({ key, value: String(value ?? '') });
-}
-
-async function addLog(sb, level, type, message, details = null) {
-  try {
-    await sb.from('logs').insert({ level, type, message, details });
-  } catch (_) {}
-}
-
 function parseSuitPayDate(dateStr) {
   if (!dateStr) return null;
   try {
@@ -48,4 +50,4 @@ function parseSuitPayDate(dateStr) {
   } catch { return null; }
 }
 
-module.exports = { getSupabase, authenticate, setCors, getSettings, setSetting, addLog, parseSuitPayDate };
+module.exports = { getSB, getSettings, setSetting, addLog, authenticate, setCors, parseSuitPayDate };

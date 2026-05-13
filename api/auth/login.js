@@ -1,14 +1,13 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
-const { getSupabase, getSettings, addLog } = require('../_helpers');
+const { getSettings, addLog } = require('../_helpers');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { username, password } = req.body;
-  const sb = getSupabase();
-  const settings = await getSettings(sb);
+  const settings = await getSettings();
 
   if (username !== settings.admin_user) {
     return res.status(401).json({ error: 'Usuário ou senha inválidos' });
@@ -16,7 +15,7 @@ module.exports = async (req, res) => {
 
   const valid = await bcrypt.compare(password, settings.admin_password_hash || '');
   if (!valid) {
-    await addLog(sb, 'warn', 'auth', `Login falhou: ${username}`);
+    await addLog('warn', 'auth', `Login falhou: ${username}`);
     return res.status(401).json({ error: 'Usuário ou senha inválidos' });
   }
 
@@ -34,6 +33,6 @@ module.exports = async (req, res) => {
     path: '/',
   }));
 
-  await addLog(sb, 'info', 'auth', `Login bem-sucedido: ${username}`);
+  await addLog('info', 'auth', `Login bem-sucedido: ${username}`);
   res.status(200).json({ ok: true, username });
 };

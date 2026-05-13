@@ -1,16 +1,14 @@
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
-const { getSupabase, setCors, getSettings, addLog } = require('../_helpers');
+const { getSB, getSettings, addLog, setCors } = require('../_helpers');
 
 module.exports = async (req, res) => {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const sb = getSupabase();
-  const settings = await getSettings(sb);
+  const settings = await getSettings();
 
-  // Valida api-key
   const apiKey = req.headers['api-key'] || req.headers['x-api-key'];
   if (!settings.api_key || apiKey !== settings.api_key) {
     return res.status(401).json({ error: 'API Key inválida ou ausente. Envie no header: api-key' });
@@ -41,32 +39,45 @@ module.exports = async (req, res) => {
       { headers: { ci: settings.suitpay_ci, cs: settings.suitpay_cs, 'Content-Type': 'application/json' }, timeout: 30000 }
     );
 
+    const sb = getSB();
     const { data: inserted } = await sb.from('transactions').insert({
-      request_number: body.requestNumber,
-      id_transaction: data.idTransaction || null,
-      amount: parseFloat(body.amount),
-      shipping_amount: parseFloat(body.shippingAmount) || 0,
-      discount_amount: parseFloat(body.discountAmount) || 0,
-      client_name: body.client.name,
-      client_document: body.client.document,
-      client_email: body.client.email || null,
-      client_phone: body.client.phoneNumber || null,
-      due_date: body.dueDate,
-      status: 'pending',
-      payment_code: data.paymentCode || null,
+      request_number:      body.requestNumber,
+      id_transaction:      data.idTransaction || null,
+      amount:              parseFloat(body.amount),
+      shipping_amount:     parseFloat(body.shippingAmount) || 0,
+      discount_amount:     parseFloat(body.discountAmount) || 0,
+      client_name:         body.client.name,
+      client_document:     body.client.document,
+      client_email:        body.client.email || null,
+      client_phone:        body.client.phoneNumber || null,
+      due_date:            body.dueDate,
+      status:              'pending',
+      payment_code:        data.paymentCode || null,
       payment_code_base64: data.paymentCodeBase64 || null,
-      callback_url: body.callbackUrl || null,
-      username_checkout: body.usernameCheckout || null,
-      raw_request: body,
-      raw_response: data,
+      callback_url:        body.callbackUrl || null,
+      username_checkout:   body.usernameCheckout || null,
+      raw_request:         body,
+      raw_response:        data,
     }).select('id').single();
 
-    await addLog(sb, 'info', 'api', `QR Code gerado: ${body.requestNumber}`, { idTransaction: data.idTransaction });
+    await addLog('info', 'api', `QR Code gerado: ${body.requestNumber}`, { idTransaction: data.idTransaction });
     return res.status(200).json({ ...data, _id: inserted?.id });
 
   } catch (err) {
     const errData = err.response?.data || { message: err.message };
-    await addLog(sb, 'error', 'api', `Erro ao gerar QR Code: ${body.requestNumber}`, errData);
+    await addLog('error', 'api', `Erro ao gerar QR Code: ${body.requestNumber}`, errData);
+
+    await getSB().from('transactions').insert({
+      request_number:  body.requestNumber,
+      amount:          parseFloat(body.amount) || 0,
+      client_name:     body.client?.name || 'N/A',
+      client_document: body.client?.document || 'N/A',
+      due_date:        body.dueDate || '',
+      status:          'error',
+      raw_request:     body,
+      raw_response:    errData,
+    }).catch(() => {});
+
     return res.status(err.response?.status || 500).json(errData);
   }
 };

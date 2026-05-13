@@ -1,4 +1,4 @@
-const { getSupabase, addLog, parseSuitPayDate } = require('../_helpers');
+const { getSB, addLog, parseSuitPayDate } = require('../_helpers');
 
 const STATUS_MAP = {
   PAID_OUT: 'paid', PAID: 'paid', COMPLETED: 'paid',
@@ -9,32 +9,32 @@ const STATUS_MAP = {
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const payload = req.body;
-  const sb = getSupabase();
+  const p = req.body;
+  const sb = getSB();
 
-  try { await sb.from('webhooks').insert({ id_transaction: payload.idTransaction || null, payload }); } catch (_) {}
+  await sb.from('webhooks').insert({ id_transaction: p.idTransaction || null, payload: p }).catch(() => {});
 
-  const newStatus = STATUS_MAP[(payload.statusTransaction || '').toUpperCase()];
+  const newStatus = STATUS_MAP[(p.statusTransaction || '').toUpperCase()];
 
-  if (newStatus && (payload.idTransaction || payload.requestNumber)) {
+  if (newStatus && (p.idTransaction || p.requestNumber)) {
     const update = {
-      status: newStatus,
-      updated_at: new Date().toISOString(),
-      payment_date: parseSuitPayDate(payload.paymentDate),
-      payer_name: payload.payerName || null,
-      payer_tax_id: payload.payerTaxId || null,
-      paid_value: payload.value || null,
+      status:       newStatus,
+      updated_at:   new Date().toISOString(),
+      payment_date: parseSuitPayDate(p.paymentDate),
+      payer_name:   p.payerName   || null,
+      payer_tax_id: p.payerTaxId  || null,
+      paid_value:   p.value       || null,
     };
 
-    if (payload.idTransaction) {
-      await sb.from('transactions').update(update).eq('id_transaction', payload.idTransaction);
+    if (p.idTransaction) {
+      await sb.from('transactions').update(update).eq('id_transaction', p.idTransaction);
     } else {
-      await sb.from('transactions').update(update).eq('request_number', payload.requestNumber);
+      await sb.from('transactions').update(update).eq('request_number', p.requestNumber);
     }
 
-    await addLog(sb, 'info', 'webhook',
-      `Pagamento recebido: ${payload.idTransaction || payload.requestNumber} → ${newStatus}`,
-      { payerName: payload.payerName, value: payload.value, paymentDate: payload.paymentDate }
+    await addLog('info', 'webhook',
+      `Pagamento recebido: ${p.idTransaction || p.requestNumber} → ${newStatus}`,
+      { payerName: p.payerName, value: p.value, paymentDate: p.paymentDate }
     );
   }
 

@@ -1,9 +1,9 @@
-const { getSupabase, authenticate, addLog } = require('../_helpers');
+const { getSB, authenticate, addLog } = require('../_helpers');
 
 module.exports = async (req, res) => {
   if (!authenticate(req, res)) return;
 
-  const sb = getSupabase();
+  const sb = getSB();
   const { id } = req.query;
 
   if (req.method === 'GET') {
@@ -13,10 +13,9 @@ module.exports = async (req, res) => {
   }
 
   if (req.method === 'PATCH') {
-    const { action } = req.body;
-    if (action === 'cancel') {
+    if (req.body?.action === 'cancel') {
       await sb.from('transactions').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', id);
-      await addLog(sb, 'info', 'transaction', `Transação cancelada: ${id}`);
+      await addLog('info', 'transaction', `Transação cancelada: ${id}`);
       return res.status(200).json({ ok: true });
     }
   }

@@ -128,10 +128,14 @@ export default function Settings() {
                 </span>
               </div>
               <div className="bg-dark text-light rounded p-3" style={{ fontSize: '.8rem', fontFamily: 'monospace' }}>
-                <div className="text-warning mb-1"># .env (Vercel → Environment Variables)</div>
+                <div className="text-warning mb-1"># .env / Vercel → Environment Variables</div>
                 <div>SUPABASE_URL=<span className="text-success">https://xxx.supabase.co</span></div>
                 <div>SUPABASE_ANON_KEY=<span className="text-success">eyJhbGci...</span></div>
                 <div>JWT_SECRET=<span className="text-success">sua-chave-secreta</span></div>
+              </div>
+              <div className="form-text mt-2">
+                <i className="bi bi-info-circle me-1" />
+                Supabase Dashboard → Settings → API → Project URL e anon key
               </div>
             </div>
 
