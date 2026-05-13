@@ -108,22 +108,49 @@ CREATE INDEX IF NOT EXISTS idx_logs_created_at             ON logs(created_at DE
                 <pre className="bg-light p-3 rounded mb-3" style={{ fontSize: '.78rem' }}>{`Content-Type: application/json
 api-key: SUA_API_KEY`}</pre>
                 <div className="fw-semibold mb-2" style={{ fontSize: '.85rem' }}>Body</div>
+                <div className="alert alert-info mb-2" style={{ borderRadius: '.6rem', border: 'none', fontSize: '.8rem' }}>
+                  <i className="bi bi-info-circle me-2" />
+                  <strong>requestNumber</strong> e <strong>dueDate</strong> são gerados automaticamente pelo sistema — não precisam ser enviados.
+                </div>
                 <pre className="bg-light p-3 rounded mb-3" style={{ fontSize: '.78rem' }}>{`{
-  "requestNumber": "12345",
-  "dueDate": "2025-12-31",
+  // Obrigatórios
   "amount": 300.00,
-  "shippingAmount": 0,
-  "discountAmount": 0,
   "client": {
     "name": "José da Silva",
     "document": "927.300.300-18",
+
+    // Opcionais
     "phoneNumber": "62999815500",
     "email": "jose@email.com",
-    "address": { "codIbge": "5208707", "street": "Rua Paraíba",
-      "number": "150", "zipCode": "74663-520",
-      "neighborhood": "Goiânia 2", "city": "Goiânia", "state": "GO" }
+    "address": {
+      "codIbge": "5208707",
+      "street": "Rua Paraíba",
+      "number": "150",
+      "zipCode": "74663-520",
+      "neighborhood": "Goiânia 2",
+      "city": "Goiânia",
+      "state": "GO"
+    }
   },
-  "products": [{ "description": "Produto", "quantity": 1, "value": 300.00 }]
+
+  // Opcionais
+  "shippingAmount": 0,
+  "discountAmount": 0,
+  "usernameCheckout": "checkout",
+  "products": [
+    { "description": "Produto", "quantity": 1, "value": 300.00 }
+  ],
+
+  // Parâmetros de rastreamento UTM (todos opcionais, envie null se não houver)
+  "trackingParameters": {
+    "utm_source": "FB",
+    "utm_campaign": "CAMPANHA|413591587909524",
+    "utm_medium": "CONJUNTO|498046723566488",
+    "utm_content": "ANUNCIO|504346051220592",
+    "utm_term": "Instagram_Feed",
+    "src": null,
+    "sck": null
+  }
 }`}</pre>
                 <div className="fw-semibold mb-2" style={{ fontSize: '.85rem' }}>Resposta</div>
                 <pre className="bg-light p-3 rounded" style={{ fontSize: '.78rem' }}>{`{
