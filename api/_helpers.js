@@ -1,4 +1,4 @@
-require('dotenv').config({ override: true });
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), override: true });
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');

@@ -1,4 +1,4 @@
-require('dotenv').config({ override: true });
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), override: true });
 const bcrypt = require('bcryptjs');
 const { dbUpsert } = require('./_helpers');
 
