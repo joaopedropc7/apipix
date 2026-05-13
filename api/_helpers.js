@@ -13,7 +13,6 @@ function sbAxios() {
       apikey: key,
       Authorization: `Bearer ${key}`,
       'Content-Type': 'application/json',
-      Prefer: 'return=representation',
     },
     timeout: 10000,
   });
@@ -27,7 +26,9 @@ async function dbSelect(table, query = '') {
 
 // INSERT — retorna o row inserido
 async function dbInsert(table, body) {
-  const { data } = await sbAxios().post(`/${table}`, body);
+  const { data } = await sbAxios().post(`/${table}`, body, {
+    headers: { Prefer: 'return=representation' },
+  });
   return Array.isArray(data) ? data[0] : data;
 }
 
@@ -41,22 +42,14 @@ async function dbUpsert(table, body) {
 
 // UPDATE — atualiza por filtro ex: 'id=eq.uuid'
 async function dbUpdate(table, filter, body) {
-  const { data } = await sbAxios().patch(`/${table}?${filter}`, body);
-  return data;
+  await sbAxios().patch(`/${table}?${filter}`, body, {
+    headers: { Prefer: 'return=minimal' },
+  });
 }
 
 // DELETE por filtro
 async function dbDelete(table, filter) {
   await sbAxios().delete(`/${table}?${filter}`);
-}
-
-// COUNT — retorna número de rows
-async function dbCount(table, query = '') {
-  const inst = sbAxios();
-  const { data } = await inst.get(`/${table}${query}`, {
-    headers: { ...inst.defaults.headers, Prefer: 'count=exact' },
-  });
-  return Array.isArray(data) ? data.length : 0;
 }
 
 // Configurações
