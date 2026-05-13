@@ -27,6 +27,7 @@ app.all('/api/pix/generate',      wrap(require('./api/pix/generate')));
 app.all('/api/webhook/suitpay',   wrap(require('./api/webhook/suitpay')));
 app.all('/api/logs',              wrap(require('./api/logs/index')));
 app.all('/api/debug',             wrap(require('./api/debug')));
+app.all('/api/setup',             wrap(require('./api/setup')));
 
 const PORT = 3001;
 app.listen(PORT, () => console.log(`API local rodando em http://localhost:${PORT}`));
