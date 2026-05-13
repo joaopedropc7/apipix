@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
