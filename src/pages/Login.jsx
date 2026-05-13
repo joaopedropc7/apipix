@@ -17,8 +17,11 @@ export default function Login() {
       await login(form.username, form.password);
       navigate('/dashboard');
     } catch (err) {
-      const msg = err.response?.data?.error || 'Erro ao conectar com o servidor.';
-      setError(msg);
+      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setError('Servidor demorou para responder. Tente novamente.');
+      } else {
+        setError(err.response?.data?.error || 'Erro ao conectar com o servidor.');
+      }
     } finally { setLoading(false); }
   };
 
