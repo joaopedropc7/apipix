@@ -1,0 +1,172 @@
+import { useEffect, useState } from 'react';
+import { getSettings, saveSettings } from '../api/client';
+
+function Toast({ msg, type, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
+  return (
+    <div className={`alert alert-${type} position-fixed bottom-0 end-0 m-3 d-flex align-items-center gap-2`}
+      style={{ zIndex: 9999, borderRadius: '.75rem', border: 'none', minWidth: 280 }}>
+      <i className={`bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-x-circle-fill'} fs-5`} />{msg}
+    </div>
+  );
+}
+
+export default function Settings() {
+  const [settings, setSettings] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState({});
+  const [showCs, setShowCs] = useState(false);
+
+  const notify = (msg, type = 'success') => setToast({ msg, type });
+
+  useEffect(() => { getSettings().then(r => setSettings(r.data)); }, []);
+
+  const save = async (action, data) => {
+    setLoading(l => ({ ...l, [action]: true }));
+    try {
+      const r = await saveSettings({ action, ...data });
+      if (r.data.apiKey) setSettings(s => ({ ...s, apiKey: r.data.apiKey }));
+      notify(action === 'password' ? 'Senha alterada com sucesso!' : 'Salvo com sucesso!');
+      getSettings().then(r => setSettings(r.data));
+    } catch (err) {
+      notify(err.response?.data?.error || 'Erro ao salvar', 'danger');
+    } finally { setLoading(l => ({ ...l, [action]: false })); }
+  };
+
+  const copyKey = () => { navigator.clipboard.writeText(settings?.apiKey || ''); notify('API Key copiada!'); };
+
+  if (!settings) return <div className="page-loader"><div className="spinner-border text-primary" /></div>;
+
+  return (
+    <>
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+      <div className="top-bar">
+        <div><div className="page-title">Configurações</div><div className="page-sub">Gerencie integrações e preferências</div></div>
+      </div>
+
+      <div className="content-area">
+        <div className="row g-3">
+          <div className="col-lg-7">
+
+            {/* SuitPay */}
+            <div className="form-section mb-3">
+              <div className="form-section-title d-flex justify-content-between">
+                <span><i className="bi bi-qr-code-scan" /> Credenciais SuitPay</span>
+                <span className={`badge ${settings.suitpayCsSet && settings.suitpayCi ? 'bg-success' : 'bg-warning text-dark'}`} style={{ fontSize: '.68rem' }}>
+                  {settings.suitpayCsSet && settings.suitpayCi ? 'Configurado' : 'Não configurado'}
+                </span>
+              </div>
+              <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target); save('suitpay', { ci: fd.get('ci'), cs: fd.get('cs'), environment: fd.get('environment') }); }}>
+                <div className="mb-3">
+                  <label className="form-label small fw-semibold text-secondary">Client ID (ci)</label>
+                  <input name="ci" className="form-control" defaultValue={settings.suitpayCi} placeholder="testesandbox_..." />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label small fw-semibold text-secondary">Client Secret (cs)</label>
+                  <div className="input-group">
+                    <input name="cs" type={showCs ? 'text' : 'password'} className="form-control"
+                      defaultValue={settings.suitpayCsSet ? settings.suitpayCs : ''} placeholder={settings.suitpayCsSet ? '••••••••' : 'Cole o CS aqui'} />
+                    <button className="btn btn-outline-secondary" type="button" onClick={() => setShowCs(v => !v)}>
+                      <i className={`bi ${showCs ? 'bi-eye-slash' : 'bi-eye'}`} />
+                    </button>
+                  </div>
+                  {settings.suitpayCsSet && <div className="form-text text-success"><i className="bi bi-check-circle me-1" />CS já configurado — deixe em branco para manter</div>}
+                </div>
+                <div className="mb-4">
+                  <label className="form-label small fw-semibold text-secondary">Ambiente</label>
+                  <select name="environment" className="form-select" defaultValue={settings.suitpayEnvironment}>
+                    <option value="sandbox">Sandbox (Testes)</option>
+                    <option value="production">Produção</option>
+                  </select>
+                </div>
+                <button className="btn-primary-custom" type="submit" disabled={loading.suitpay}>
+                  {loading.suitpay ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar SuitPay</>}
+                </button>
+              </form>
+            </div>
+
+            {/* API Key */}
+            <div className="form-section mb-3">
+              <div className="form-section-title"><i className="bi bi-shield-lock" /> API Key</div>
+              <label className="form-label small fw-semibold text-secondary">Chave para autenticar requisições dos seus clientes</label>
+              <div className="input-group mb-2">
+                <span className="input-group-text"><i className="bi bi-key" /></span>
+                <input className="form-control font-monospace" value={settings.apiKey || ''} readOnly style={{ fontSize: '.85rem' }} />
+                <button className="btn btn-outline-secondary" type="button" onClick={copyKey}><i className="bi bi-clipboard" /></button>
+              </div>
+              <div className="form-text mb-3">Header: <code>api-key: {settings.apiKey || '...'}</code></div>
+              <button className="btn btn-sm btn-outline-warning" onClick={() => { if (confirm('Gerar nova API Key? A atual deixará de funcionar.')) save('regenerate-key', {}); }}>
+                <i className="bi bi-arrow-clockwise me-1" />Gerar Nova API Key
+              </button>
+            </div>
+
+            {/* Server URL */}
+            <div className="form-section mb-3">
+              <div className="form-section-title"><i className="bi bi-globe" /> URL do Servidor</div>
+              <form onSubmit={e => { e.preventDefault(); save('server', { serverBaseUrl: new FormData(e.target).get('serverBaseUrl') }); }}>
+                <div className="mb-2">
+                  <input name="serverBaseUrl" className="form-control" defaultValue={settings.serverBaseUrl} placeholder="https://meusite.com ou https://xxxx.ngrok.io" />
+                  {settings.serverBaseUrl && (
+                    <div className="form-text">Webhook: <code>{settings.serverBaseUrl.replace(/\/$/, '')}/api/webhook/suitpay</code></div>
+                  )}
+                </div>
+                <button className="btn-primary-custom" type="submit" disabled={loading.server}>
+                  {loading.server ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar URL</>}
+                </button>
+              </form>
+            </div>
+
+          </div>
+
+          <div className="col-lg-5">
+            {/* Supabase status */}
+            <div className="form-section mb-3">
+              <div className="form-section-title d-flex justify-content-between">
+                <span><i className="bi bi-database" /> Supabase</span>
+                <span className={`badge ${settings.supabaseConfigured ? 'bg-success' : 'bg-danger'}`} style={{ fontSize: '.68rem' }}>
+                  {settings.supabaseConfigured ? 'Conectado' : 'Não configurado'}
+                </span>
+              </div>
+              <div className="bg-dark text-light rounded p-3" style={{ fontSize: '.8rem', fontFamily: 'monospace' }}>
+                <div className="text-warning mb-1"># .env (Vercel → Environment Variables)</div>
+                <div>SUPABASE_URL=<span className="text-success">https://xxx.supabase.co</span></div>
+                <div>SUPABASE_ANON_KEY=<span className="text-success">eyJhbGci...</span></div>
+                <div>JWT_SECRET=<span className="text-success">sua-chave-secreta</span></div>
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="form-section mb-3">
+              <div className="form-section-title"><i className="bi bi-lock-fill" /> Alterar Senha do Admin</div>
+              <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target); save('password', { currentPassword: fd.get('currentPassword'), newPassword: fd.get('newPassword'), confirmPassword: fd.get('confirmPassword') }); e.target.reset(); }}>
+                <div className="mb-3"><label className="form-label small fw-semibold text-secondary">Senha Atual</label><input name="currentPassword" type="password" className="form-control" placeholder="••••••••" required /></div>
+                <div className="mb-3"><label className="form-label small fw-semibold text-secondary">Nova Senha</label><input name="newPassword" type="password" className="form-control" minLength={6} placeholder="Mínimo 6 caracteres" required /></div>
+                <div className="mb-4"><label className="form-label small fw-semibold text-secondary">Confirmar Nova Senha</label><input name="confirmPassword" type="password" className="form-control" placeholder="Repita a nova senha" required /></div>
+                <button className="btn-primary-custom" type="submit" disabled={loading.password}>
+                  {loading.password ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-key" /> Alterar Senha</>}
+                </button>
+              </form>
+            </div>
+
+            {/* System info */}
+            <div className="card-panel">
+              <div className="card-panel-body">
+                <div className="fw-bold mb-3"><i className="bi bi-info-circle text-primary me-2" />Status</div>
+                {[
+                  ['Usuário admin', settings.adminUser],
+                  ['Ambiente SuitPay', settings.suitpayEnvironment],
+                  ['Supabase', settings.supabaseConfigured ? '✅ Conectado' : '❌ Não configurado'],
+                ].map(([l, v]) => (
+                  <div key={l} className="d-flex justify-content-between mb-2" style={{ fontSize: '.85rem' }}>
+                    <span className="text-muted">{l}</span>
+                    <span className="fw-semibold">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
