@@ -32,9 +32,11 @@ async function dbInsert(table, body) {
   return Array.isArray(data) ? data[0] : data;
 }
 
-// UPSERT — insere ou atualiza
-async function dbUpsert(table, body) {
-  const { data } = await sbAxios().post(`/${table}`, body, {
+// UPSERT — insere ou atualiza (body pode ser objeto ou array)
+async function dbUpsert(table, body, onConflict = null) {
+  const payload = Array.isArray(body) ? body : [body];
+  const url = onConflict ? `/${table}?on_conflict=${onConflict}` : `/${table}`;
+  const { data } = await sbAxios().post(url, payload, {
     headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
   });
   return Array.isArray(data) ? data[0] : data;
@@ -60,7 +62,7 @@ async function getSettings() {
 }
 
 async function setSetting(key, value) {
-  await dbUpsert('settings', { key, value: String(value ?? '') });
+  await dbUpsert('settings', { key, value: String(value ?? '') }, 'key');
 }
 
 async function addLog(level, type, message, details = null) {
