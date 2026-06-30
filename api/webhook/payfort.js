@@ -63,8 +63,6 @@ module.exports = async (req, res) => {
 
   await dbUpdate('transactions', `id=eq.${transaction.id}`, update);
 
-  res.status(200).json({ ok: true, status: newStatus, transactionId: transaction.id });
-
   await addLog('info', 'webhook',
     `Pagamento Payfort ${newStatus === 'paid' ? 'CONFIRMADO ✅' : newStatus.toUpperCase()}: pedido #${transaction.request_number}`,
     {
@@ -78,6 +76,11 @@ module.exports = async (req, res) => {
 
   if (newStatus === 'paid') {
     const fullTx = { ...transaction, ...update, raw_request: transaction.raw_request };
-    await sendToUtmify(fullTx, 'paid', update.payment_date);
+    await Promise.race([
+      sendToUtmify(fullTx, 'paid', update.payment_date),
+      new Promise(resolve => setTimeout(resolve, 8000)),
+    ]);
   }
+
+  return res.status(200).json({ ok: true, status: newStatus, transactionId: transaction.id });
 };

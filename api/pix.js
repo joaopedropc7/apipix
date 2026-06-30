@@ -189,8 +189,16 @@ module.exports = async (req, res) => {
         raw_response:        data,
       });
 
-      // Envia resposta ao cliente antes das operações secundárias
-      res.status(200).json({
+      await addLog('info', 'api', `QR Code gerado (${gateway}): ${body.requestNumber}`, { idTransaction });
+
+      // Notifica Utmify antes de responder — Vercel congela o container após res.json()
+      // Promise.race garante que não espera mais de 8s se a Utmify estiver lenta
+      await Promise.race([
+        sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null),
+        new Promise(resolve => setTimeout(resolve, 8000)),
+      ]);
+
+      return res.status(200).json({
         idTransaction,
         paymentCode,
         paymentCodeBase64,
@@ -199,11 +207,6 @@ module.exports = async (req, res) => {
         requestNumber: body.requestNumber,
         callbackUrl:   body.callbackUrl,
       });
-
-      // Aguarda operações secundárias após enviar a resposta
-      // (no Vercel, o container só é congelado quando o handler retorna — não quando res.json é chamado)
-      await addLog('info', 'api', `QR Code gerado (${gateway}): ${body.requestNumber}`, { idTransaction });
-      await sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null);
 
     } catch (err) {
       const errData = err.response?.data || { message: err.message };
