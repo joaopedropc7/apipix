@@ -194,16 +194,25 @@ async function sendToUtmify(transaction, status, approvedDate = null) {
       isTest: false,
     };
 
-    await axios.post('https://api.utmify.com.br/api-credentials/orders', body, {
+    await addLog('info', 'utmify', `Utmify: enviando ${transaction.request_number} → ${status}`, { payload: body });
+
+    const resp = await axios.post('https://api.utmify.com.br/api-credentials/orders', body, {
       headers: { 'x-api-token': token, 'Content-Type': 'application/json' },
       timeout: 10000,
     });
 
-    await addLog('info', 'utmify', `Utmify: ${transaction.request_number} → ${status}`);
+    await addLog('info', 'utmify', `Utmify: ${transaction.request_number} → ${status} ✅`, {
+      httpStatus: resp.status,
+      response:   resp.data,
+    });
   } catch (err) {
     await addLog('error', 'utmify',
       `Erro Utmify: ${transaction.request_number}`,
-      err.response?.data || err.message
+      {
+        httpStatus:   err.response?.status,
+        errorBody:    err.response?.data,
+        errorMessage: err.message,
+      }
     );
   }
 }
