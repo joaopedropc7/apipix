@@ -145,7 +145,24 @@ module.exports = async (req, res) => {
       let idTransaction, paymentCode, paymentCodeBase64, data;
 
       if (gateway === 'payfort') {
-        const token = await getPayfortToken(settings);
+        await addLog('info', 'api', `Payfort auth: iniciando (${body.requestNumber})`, {
+          api_key_prefix: settings.payfort_api_key?.slice(0, 8) || '(vazio)',
+          api_secret_set: !!settings.payfort_api_secret,
+        });
+
+        let token;
+        try {
+          token = await getPayfortToken(settings);
+          await addLog('info', 'api', `Payfort auth: token obtido (${body.requestNumber})`, { tokenPrefix: token?.slice(0, 20) });
+        } catch (authErr) {
+          await addLog('error', 'api', `Payfort auth: FALHOU (${body.requestNumber})`, {
+            httpStatus:   authErr.response?.status,
+            errorBody:    authErr.response?.data,
+            errorMessage: authErr.message,
+          });
+          throw authErr;
+        }
+
         const payload = {
           amountInCents: Math.round(amount * 100),
           description:   `Pedido ${body.requestNumber}`.slice(0, 140),
@@ -159,10 +176,22 @@ module.exports = async (req, res) => {
           },
         };
         await addLog('info', 'api', `Payfort request: ${body.requestNumber}`, payload);
-        const resp = await axios.post('https://api.payfortbank.com/api/v1/pix/in/qrcode', payload, {
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          timeout: 30000,
-        });
+
+        let resp;
+        try {
+          resp = await axios.post('https://api.payfortbank.com/api/v1/pix/in/qrcode', payload, {
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            timeout: 30000,
+          });
+        } catch (reqErr) {
+          await addLog('error', 'api', `Payfort qrcode: FALHOU (${body.requestNumber})`, {
+            httpStatus:   reqErr.response?.status,
+            errorBody:    reqErr.response?.data,
+            errorMessage: reqErr.message,
+          });
+          throw reqErr;
+        }
+
         await addLog('info', 'api', `Payfort response: ${body.requestNumber}`, resp.data);
         data = resp.data;
         idTransaction     = data.data?.id;
