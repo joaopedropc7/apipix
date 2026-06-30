@@ -73,8 +73,8 @@ module.exports = async (req, res) => {
       .update(`${document}-${amount}-${windowSlot}`)
       .digest('hex').slice(0, 40);
 
-    // Verifica se já existe PIX com essa dedup_key (caso normal ou race condition já resolvida)
-    const existing = await dbSelect('transactions', `?dedup_key=eq.${dedupKey}&limit=1`);
+    // Dedup: ignora registros com falha (error/generating sem idTransaction) — só bloqueia se há PIX válido pendente
+    const existing = await dbSelect('transactions', `?dedup_key=eq.${dedupKey}&status=not.in.(error,generating)&limit=1`);
     if (existing.length > 0) {
       const dup = existing[0];
       return res.status(200).json({
