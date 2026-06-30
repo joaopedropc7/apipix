@@ -145,20 +145,29 @@ module.exports = async (req, res) => {
       let idTransaction, paymentCode, paymentCodeBase64, data;
 
       if (gateway === 'payfort') {
-        addLog('info', 'api', `Payfort auth: iniciando (${body.requestNumber})`, {
-          api_key_prefix: settings.payfort_api_key?.slice(0, 8) || '(vazio)',
-          api_secret_set: !!settings.payfort_api_secret,
+        const _apiKey    = settings.payfort_api_key    || '';
+        const _apiSecret = settings.payfort_api_secret || '';
+        const _basicRaw  = `${_apiKey}:${_apiSecret}`;
+        const _basicB64  = Buffer.from(_basicRaw).toString('base64');
+        await addLog('info', 'api', `Payfort auth: detalhes (${body.requestNumber})`, {
+          url:              'POST https://api.payfortbank.com/api/auth',
+          api_key:          _apiKey,
+          api_secret_len:   _apiSecret.length,
+          api_secret_start: _apiSecret.slice(0, 6),
+          raw_credentials:  _basicRaw.slice(0, 40) + '...',
+          authorization:    `Basic ${_basicB64}`,
         });
 
         let token;
         try {
           token = await getPayfortToken(settings);
-          addLog('info', 'api', `Payfort auth: token obtido (${body.requestNumber})`, { tokenPrefix: token?.slice(0, 20) });
+          await addLog('info', 'api', `Payfort auth: token obtido (${body.requestNumber})`, { tokenPrefix: token?.slice(0, 30) });
         } catch (authErr) {
-          addLog('error', 'api', `Payfort auth: FALHOU (${body.requestNumber})`, {
+          await addLog('error', 'api', `Payfort auth: FALHOU (${body.requestNumber})`, {
             httpStatus:   authErr.response?.status,
             errorBody:    authErr.response?.data,
             errorMessage: authErr.message,
+            responseHeaders: authErr.response?.headers,
           });
           throw authErr;
         }
