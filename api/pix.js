@@ -158,10 +158,12 @@ module.exports = async (req, res) => {
             phone:        body.client.phoneNumber || undefined,
           },
         };
+        await addLog('info', 'api', `Payfort request: ${body.requestNumber}`, payload);
         const resp = await axios.post('https://api.payfortbank.com/api/v1/pix/in/qrcode', payload, {
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           timeout: 30000,
         });
+        await addLog('info', 'api', `Payfort response: ${body.requestNumber}`, resp.data);
         data = resp.data;
         idTransaction     = data.data?.id;
         paymentCode       = data.data?.pix?.emv;
@@ -204,7 +206,11 @@ module.exports = async (req, res) => {
 
     } catch (err) {
       const errData = err.response?.data || { message: err.message };
-      await addLog('error', 'api', `Erro ao gerar QR Code: ${body.requestNumber}`, errData);
+      await addLog('error', 'api', `Erro ao gerar QR Code (${gateway}): ${body.requestNumber}`, {
+        httpStatus:   err.response?.status,
+        errorBody:    errData,
+        errorMessage: err.message,
+      });
       await dbUpdate('transactions', `id=eq.${reserved.id}`, {
         status:       'error',
         raw_response: errData,
