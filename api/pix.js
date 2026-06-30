@@ -145,7 +145,7 @@ module.exports = async (req, res) => {
       let idTransaction, paymentCode, paymentCodeBase64, data;
 
       if (gateway === 'payfort') {
-        await addLog('info', 'api', `Payfort auth: iniciando (${body.requestNumber})`, {
+        addLog('info', 'api', `Payfort auth: iniciando (${body.requestNumber})`, {
           api_key_prefix: settings.payfort_api_key?.slice(0, 8) || '(vazio)',
           api_secret_set: !!settings.payfort_api_secret,
         });
@@ -153,9 +153,9 @@ module.exports = async (req, res) => {
         let token;
         try {
           token = await getPayfortToken(settings);
-          await addLog('info', 'api', `Payfort auth: token obtido (${body.requestNumber})`, { tokenPrefix: token?.slice(0, 20) });
+          addLog('info', 'api', `Payfort auth: token obtido (${body.requestNumber})`, { tokenPrefix: token?.slice(0, 20) });
         } catch (authErr) {
-          await addLog('error', 'api', `Payfort auth: FALHOU (${body.requestNumber})`, {
+          addLog('error', 'api', `Payfort auth: FALHOU (${body.requestNumber})`, {
             httpStatus:   authErr.response?.status,
             errorBody:    authErr.response?.data,
             errorMessage: authErr.message,
@@ -175,7 +175,7 @@ module.exports = async (req, res) => {
             phone:        body.client.phoneNumber || undefined,
           },
         };
-        await addLog('info', 'api', `Payfort request: ${body.requestNumber}`, payload);
+        addLog('info', 'api', `Payfort request: ${body.requestNumber}`, payload);
 
         let resp;
         try {
@@ -184,7 +184,7 @@ module.exports = async (req, res) => {
             timeout: 30000,
           });
         } catch (reqErr) {
-          await addLog('error', 'api', `Payfort qrcode: FALHOU (${body.requestNumber})`, {
+          addLog('error', 'api', `Payfort qrcode: FALHOU (${body.requestNumber})`, {
             httpStatus:   reqErr.response?.status,
             errorBody:    reqErr.response?.data,
             errorMessage: reqErr.message,
@@ -192,7 +192,7 @@ module.exports = async (req, res) => {
           throw reqErr;
         }
 
-        await addLog('info', 'api', `Payfort response: ${body.requestNumber}`, resp.data);
+        addLog('info', 'api', `Payfort response: ${body.requestNumber}`, resp.data);
         data = resp.data;
         idTransaction     = data.data?.id;
         paymentCode       = data.data?.pix?.emv;
@@ -220,8 +220,9 @@ module.exports = async (req, res) => {
         raw_response:        data,
       });
 
-      await addLog('info', 'api', `QR Code gerado (${gateway}): ${body.requestNumber}`, { idTransaction });
-      await sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null);
+      // fire-and-forget: não bloqueiam a resposta ao cliente
+      addLog('info', 'api', `QR Code gerado (${gateway}): ${body.requestNumber}`, { idTransaction });
+      sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null);
 
       return res.status(200).json({
         idTransaction,
