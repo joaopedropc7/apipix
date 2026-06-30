@@ -1,5 +1,6 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), override: true });
 const axios = require('axios');
+const https = require('https');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 
@@ -90,13 +91,36 @@ function setCors(res) {
 }
 
 // Gera token JWT da Payfort via Basic Auth (api_key:api_secret) — expira em 60s
-async function getPayfortToken(settings) {
+// Usa https nativo (não axios): a Payfort retorna 500 se a requisição tiver
+// Content-Type, e o axios sempre injeta um por padrão mesmo sem body.
+function getPayfortToken(settings) {
   const credentials = Buffer.from(`${settings.payfort_api_key}:${settings.payfort_api_secret}`).toString('base64');
-  const { data } = await axios.post('https://api.payfortbank.com/api/auth', null, {
-    headers: { Authorization: `Basic ${credentials}` },
-    timeout: 15000,
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.payfortbank.com',
+      path:     '/api/auth',
+      method:   'POST',
+      headers:  { Authorization: `Basic ${credentials}` },
+      timeout:  15000,
+    }, (res) => {
+      let body = '';
+      res.on('data', chunk => { body += chunk; });
+      res.on('end', () => {
+        let parsed;
+        try { parsed = JSON.parse(body); } catch { parsed = { message: body }; }
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(parsed.token);
+        } else {
+          const err = new Error(`Payfort auth failed: ${res.statusCode}`);
+          err.response = { status: res.statusCode, data: parsed };
+          reject(err);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => req.destroy(new Error('Payfort auth timeout')));
+    req.end();
   });
-  return data.token;
 }
 
 function parseSuitPayDate(dateStr) {

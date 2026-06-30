@@ -145,33 +145,7 @@ module.exports = async (req, res) => {
       let idTransaction, paymentCode, paymentCodeBase64, data;
 
       if (gateway === 'payfort') {
-        const _apiKey    = settings.payfort_api_key    || '';
-        const _apiSecret = settings.payfort_api_secret || '';
-        const _basicRaw  = `${_apiKey}:${_apiSecret}`;
-        const _basicB64  = Buffer.from(_basicRaw).toString('base64');
-        await addLog('info', 'api', `Payfort auth: detalhes (${body.requestNumber})`, {
-          url:              'POST https://api.payfortbank.com/api/auth',
-          api_key:          _apiKey,
-          api_secret_len:   _apiSecret.length,
-          api_secret_start: _apiSecret.slice(0, 6),
-          raw_credentials:  _basicRaw.slice(0, 40) + '...',
-          authorization:    `Basic ${_basicB64}`,
-        });
-
-        let token;
-        try {
-          token = await getPayfortToken(settings);
-          await addLog('info', 'api', `Payfort auth: token obtido (${body.requestNumber})`, { tokenPrefix: token?.slice(0, 30) });
-        } catch (authErr) {
-          await addLog('error', 'api', `Payfort auth: FALHOU (${body.requestNumber})`, {
-            httpStatus:   authErr.response?.status,
-            errorBody:    authErr.response?.data,
-            errorMessage: authErr.message,
-            responseHeaders: authErr.response?.headers,
-          });
-          throw authErr;
-        }
-
+        const token = await getPayfortToken(settings);
         const payload = {
           amountInCents: Math.round(amount * 100),
           description:   `Pedido ${body.requestNumber}`.slice(0, 140),
@@ -184,24 +158,10 @@ module.exports = async (req, res) => {
             phone:        body.client.phoneNumber || undefined,
           },
         };
-        addLog('info', 'api', `Payfort request: ${body.requestNumber}`, payload);
-
-        let resp;
-        try {
-          resp = await axios.post('https://api.payfortbank.com/api/v1/pix/in/qrcode', payload, {
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            timeout: 30000,
-          });
-        } catch (reqErr) {
-          addLog('error', 'api', `Payfort qrcode: FALHOU (${body.requestNumber})`, {
-            httpStatus:   reqErr.response?.status,
-            errorBody:    reqErr.response?.data,
-            errorMessage: reqErr.message,
-          });
-          throw reqErr;
-        }
-
-        addLog('info', 'api', `Payfort response: ${body.requestNumber}`, resp.data);
+        const resp = await axios.post('https://api.payfortbank.com/api/v1/pix/in/qrcode', payload, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          timeout: 30000,
+        });
         data = resp.data;
         idTransaction     = data.data?.id;
         paymentCode       = data.data?.pix?.emv;
