@@ -57,12 +57,7 @@ module.exports = async (req, res) => {
 
   await dbUpdate('transactions', `id=eq.${transaction.id}`, update);
 
-  // Notifica Utmify: fire-and-forget para não bloquear a resposta ao gateway
-  if (newStatus === 'paid') {
-    const paymentDate = parseSuitPayDate(p.paymentDate) || new Date().toISOString();
-    const fullTx = { ...transaction, ...update, raw_request: transaction.raw_request };
-    sendToUtmify(fullTx, 'paid', paymentDate);
-  }
+  res.status(200).json({ ok: true, status: newStatus, transactionId: transaction.id });
 
   await addLog('info', 'webhook',
     `Pagamento ${newStatus === 'paid' ? 'CONFIRMADO ✅' : newStatus.toUpperCase()}: pedido #${transaction.request_number}`,
@@ -77,5 +72,9 @@ module.exports = async (req, res) => {
     }
   );
 
-  return res.status(200).json({ ok: true, status: newStatus, transactionId: transaction.id });
+  if (newStatus === 'paid') {
+    const paymentDate = parseSuitPayDate(p.paymentDate) || new Date().toISOString();
+    const fullTx = { ...transaction, ...update, raw_request: transaction.raw_request };
+    await sendToUtmify(fullTx, 'paid', paymentDate);
+  }
 };

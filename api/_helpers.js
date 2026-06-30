@@ -140,10 +140,14 @@ function toUtmifyDate(isoDate) {
 }
 
 async function sendToUtmify(transaction, status, approvedDate = null) {
+  await addLog('info', 'utmify', `Utmify: iniciando envio ${transaction.request_number} → ${status}`).catch(() => {});
   try {
     const settings = await getSettings();
     const token = settings.utmify_token;
-    if (!token) return;
+    if (!token) {
+      await addLog('warn', 'utmify', `Utmify: token não configurado — envio ignorado (${transaction.request_number} → ${status})`);
+      return;
+    }
 
     const raw = transaction.raw_request || {};
     const tracking = raw.trackingParameters || {};

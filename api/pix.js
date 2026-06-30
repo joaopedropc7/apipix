@@ -189,11 +189,8 @@ module.exports = async (req, res) => {
         raw_response:        data,
       });
 
-      // fire-and-forget: não bloqueiam a resposta ao cliente
-      addLog('info', 'api', `QR Code gerado (${gateway}): ${body.requestNumber}`, { idTransaction });
-      sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null);
-
-      return res.status(200).json({
+      // Envia resposta ao cliente antes das operações secundárias
+      res.status(200).json({
         idTransaction,
         paymentCode,
         paymentCodeBase64,
@@ -202,6 +199,11 @@ module.exports = async (req, res) => {
         requestNumber: body.requestNumber,
         callbackUrl:   body.callbackUrl,
       });
+
+      // Aguarda operações secundárias após enviar a resposta
+      // (no Vercel, o container só é congelado quando o handler retorna — não quando res.json é chamado)
+      await addLog('info', 'api', `QR Code gerado (${gateway}): ${body.requestNumber}`, { idTransaction });
+      await sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null);
 
     } catch (err) {
       const errData = err.response?.data || { message: err.message };
