@@ -194,9 +194,19 @@ async function sendToUtmify(transaction, status, approvedDate = null) {
       isTest: false,
     };
 
-    await addLog('info', 'utmify', `Utmify: enviando ${transaction.request_number} → ${status}`, { payload: body });
+    const UTMIFY_URL = 'https://api.utmify.com.br/api-credentials/orders';
+    const reqHeaders = {
+      'x-api-token':  token.slice(0, 6) + '••••••',
+      'Content-Type': 'application/json',
+    };
 
-    const resp = await axios.post('https://api.utmify.com.br/api-credentials/orders', body, {
+    await addLog('info', 'utmify', `Utmify: enviando ${transaction.request_number} → ${status}`, {
+      url:     UTMIFY_URL,
+      headers: reqHeaders,
+      body,
+    });
+
+    const resp = await axios.post(UTMIFY_URL, body, {
       headers: { 'x-api-token': token, 'Content-Type': 'application/json' },
       timeout: 10000,
     });
