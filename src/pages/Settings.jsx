@@ -16,6 +16,7 @@ export default function Settings() {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState({});
   const [showCs, setShowCs] = useState(false);
+  const [showPayfortSecret, setShowPayfortSecret] = useState(false);
 
   const notify = (msg, type = 'success') => setToast({ msg, type });
 
@@ -47,6 +48,29 @@ export default function Settings() {
       <div className="content-area">
         <div className="row g-3">
           <div className="col-lg-7">
+
+            {/* Gateway ativo */}
+            <div className="form-section mb-3">
+              <div className="form-section-title"><i className="bi bi-toggles" /> Gateway de Pagamento Ativo</div>
+              <p className="text-secondary small mb-3">Apenas um gateway pode estar ativo por vez. Novas transações usarão o gateway selecionado.</p>
+              <div className="d-flex gap-2">
+                {[
+                  ['suitpay', 'SuitPay', 'bi-qr-code-scan'],
+                  ['payfort', 'PayFort', 'bi-bank'],
+                ].map(([value, label, icon]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`btn ${settings.activeGateway === value ? 'btn-primary-custom' : 'btn-outline-secondary'} flex-fill`}
+                    disabled={loading.gateway || settings.activeGateway === value}
+                    onClick={() => save('gateway', { activeGateway: value })}
+                  >
+                    <i className={`bi ${icon} me-1`} /> {label}
+                    {settings.activeGateway === value && <i className="bi bi-check-circle-fill ms-2" />}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* SuitPay */}
             <div className="form-section mb-3">
@@ -81,6 +105,40 @@ export default function Settings() {
                 </div>
                 <button className="btn-primary-custom" type="submit" disabled={loading.suitpay}>
                   {loading.suitpay ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar SuitPay</>}
+                </button>
+              </form>
+            </div>
+
+            {/* PayFort */}
+            <div className="form-section mb-3">
+              <div className="form-section-title d-flex justify-content-between">
+                <span><i className="bi bi-bank" /> Credenciais PayFort</span>
+                <span className={`badge ${settings.payfortApiSecretSet && settings.payfortApiKey ? 'bg-success' : 'bg-warning text-dark'}`} style={{ fontSize: '.68rem' }}>
+                  {settings.payfortApiSecretSet && settings.payfortApiKey ? 'Configurado' : 'Não configurado'}
+                </span>
+              </div>
+              <form onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target); save('payfort', { accountId: fd.get('accountId'), apiKey: fd.get('apiKey'), apiSecret: fd.get('apiSecret') }); }}>
+                <div className="mb-3">
+                  <label className="form-label small fw-semibold text-secondary">Account ID</label>
+                  <input name="accountId" className="form-control" defaultValue={settings.payfortAccountId} placeholder="cmqv6a0dm002fk11tfax6gain" />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label small fw-semibold text-secondary">API Key (pública)</label>
+                  <input name="apiKey" className="form-control" defaultValue={settings.payfortApiKey} placeholder="cmr0z0uop00001tlmanvp7ev2" />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label small fw-semibold text-secondary">API Secret (secreta)</label>
+                  <div className="input-group">
+                    <input name="apiSecret" type={showPayfortSecret ? 'text' : 'password'} className="form-control"
+                      defaultValue={settings.payfortApiSecretSet ? settings.payfortApiSecret : ''} placeholder={settings.payfortApiSecretSet ? '••••••••' : 'Cole a API Secret aqui'} />
+                    <button className="btn btn-outline-secondary" type="button" onClick={() => setShowPayfortSecret(v => !v)}>
+                      <i className={`bi ${showPayfortSecret ? 'bi-eye-slash' : 'bi-eye'}`} />
+                    </button>
+                  </div>
+                  {settings.payfortApiSecretSet && <div className="form-text text-success"><i className="bi bi-check-circle me-1" />API Secret já configurada — deixe em branco para manter</div>}
+                </div>
+                <button className="btn-primary-custom" type="submit" disabled={loading.payfort}>
+                  {loading.payfort ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar PayFort</>}
                 </button>
               </form>
             </div>
@@ -179,6 +237,7 @@ export default function Settings() {
                 <div className="fw-bold mb-3"><i className="bi bi-info-circle text-primary me-2" />Status</div>
                 {[
                   ['Usuário admin', settings.adminUser],
+                  ['Gateway ativo', settings.activeGateway === 'payfort' ? 'PayFort' : 'SuitPay'],
                   ['Ambiente SuitPay', settings.suitpayEnvironment],
                   ['Supabase', settings.supabaseConfigured ? '✅ Conectado' : '❌ Não configurado'],
                 ].map(([l, v]) => (

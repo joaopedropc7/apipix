@@ -1,7 +1,7 @@
 const axios = require('axios');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const { dbInsert, dbSelect, dbUpdate, getSettings, addLog, setCors, sendToUtmify } = require('./_helpers');
+const { dbInsert, dbSelect, dbUpdate, getSettings, addLog, setCors, sendToUtmify, getPayfortToken } = require('./_helpers');
 
 module.exports = async (req, res) => {
   setCors(res);
@@ -33,6 +33,7 @@ module.exports = async (req, res) => {
       id:            tx.id,
       requestNumber: tx.request_number,
       idTransaction: tx.id_transaction,
+      gateway:       tx.gateway,
       status:        tx.status,
       amount:        tx.amount,
       dueDate:       tx.due_date,
@@ -48,8 +49,13 @@ module.exports = async (req, res) => {
 
   // POST /api/pix?action=generate
   if (action === 'generate' && req.method === 'POST') {
-    if (!settings.suitpay_ci || !settings.suitpay_cs) {
+    const gateway = settings.active_gateway === 'payfort' ? 'payfort' : 'suitpay';
+
+    if (gateway === 'suitpay' && (!settings.suitpay_ci || !settings.suitpay_cs)) {
       return res.status(503).json({ error: 'Credenciais SuitPay não configuradas no painel admin' });
+    }
+    if (gateway === 'payfort' && (!settings.payfort_api_key || !settings.payfort_api_secret)) {
+      return res.status(503).json({ error: 'Credenciais Payfort não configuradas no painel admin' });
     }
 
     const body = req.body;
@@ -91,7 +97,8 @@ module.exports = async (req, res) => {
     }
 
     const serverBase = settings.server_base_url?.trim().replace(/\/$/, '');
-    body.callbackUrl = serverBase ? `${serverBase}/api/webhook/suitpay` : '';
+    const webhookPath = gateway === 'payfort' ? '/api/webhook/payfort' : '/api/webhook/suitpay';
+    body.callbackUrl = serverBase ? `${serverBase}${webhookPath}` : '';
 
     // Reserva o slot no banco com dedup_key — bloqueia race condition no nível do PostgreSQL
     let reserved;
@@ -110,6 +117,7 @@ module.exports = async (req, res) => {
         status:          'generating',
         callback_url:    body.callbackUrl || null,
         username_checkout: body.usernameCheckout || null,
+        gateway,
         raw_request:     body,
       });
     } catch (err) {
@@ -133,30 +141,62 @@ module.exports = async (req, res) => {
       throw err;
     }
 
-    const baseUrl = settings.suitpay_environment === 'production'
-      ? 'https://ws.suitpay.app'
-      : 'https://sandbox.ws.suitpay.app';
-
     try {
-      const { data } = await axios.post(`${baseUrl}/api/v1/gateway/request-qrcode`, body, {
-        headers: { ci: settings.suitpay_ci, cs: settings.suitpay_cs, 'Content-Type': 'application/json' },
-        timeout: 30000,
-      });
+      let idTransaction, paymentCode, paymentCodeBase64, data;
 
-      // Atualiza o registro reservado com os dados reais do SuitPay
+      if (gateway === 'payfort') {
+        const token = await getPayfortToken(settings);
+        const payload = {
+          amountInCents: Math.round(amount * 100),
+          description:   `Pedido ${body.requestNumber}`.slice(0, 140),
+          postbackUrl:   body.callbackUrl || undefined,
+          customer: {
+            name:         body.client.name,
+            email:        body.client.email || undefined,
+            documentType: document.length > 11 ? 'cnpj' : 'cpf',
+            document,
+            phone:        body.client.phoneNumber || undefined,
+          },
+        };
+        const resp = await axios.post('https://api.payfortbank.com/api/v1/pix/in/qrcode', payload, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          timeout: 30000,
+        });
+        data = resp.data;
+        idTransaction     = data.data?.id;
+        paymentCode       = data.data?.pix?.emv;
+        paymentCodeBase64 = data.data?.pix?.qrCode;
+      } else {
+        const baseUrl = settings.suitpay_environment === 'production'
+          ? 'https://ws.suitpay.app'
+          : 'https://sandbox.ws.suitpay.app';
+        const resp = await axios.post(`${baseUrl}/api/v1/gateway/request-qrcode`, body, {
+          headers: { ci: settings.suitpay_ci, cs: settings.suitpay_cs, 'Content-Type': 'application/json' },
+          timeout: 30000,
+        });
+        data = resp.data;
+        idTransaction     = data.idTransaction;
+        paymentCode       = data.paymentCode;
+        paymentCodeBase64 = data.paymentCodeBase64;
+      }
+
+      // Atualiza o registro reservado com os dados reais do gateway
       await dbUpdate('transactions', `id=eq.${reserved.id}`, {
-        id_transaction:      data.idTransaction || null,
+        id_transaction:      idTransaction || null,
         status:              'pending',
-        payment_code:        data.paymentCode || null,
-        payment_code_base64: data.paymentCodeBase64 || null,
+        payment_code:        paymentCode || null,
+        payment_code_base64: paymentCodeBase64 || null,
         raw_response:        data,
       });
 
-      await addLog('info', 'api', `QR Code gerado: ${body.requestNumber}`, { idTransaction: data.idTransaction });
-      await sendToUtmify({ ...reserved, id_transaction: data.idTransaction }, 'waiting_payment', null);
+      await addLog('info', 'api', `QR Code gerado (${gateway}): ${body.requestNumber}`, { idTransaction });
+      await sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null);
 
       return res.status(200).json({
-        ...data,
+        idTransaction,
+        paymentCode,
+        paymentCodeBase64,
+        response:      'OK',
         _id:           reserved.id,
         requestNumber: body.requestNumber,
         callbackUrl:   body.callbackUrl,

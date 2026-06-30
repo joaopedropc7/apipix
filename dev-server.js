@@ -13,6 +13,7 @@ function wrap(handler) {
 }
 
 // Auth — rota única com action via query
+app.all('/api/auth', wrap(require('./api/auth')));
 app.all('/api/auth/:action', (req, res) => {
   req.query = { ...req.query, action: req.params.action };
   require('./api/auth')(req, res);
@@ -30,6 +31,7 @@ app.all('/api/transactions',       wrap(require('./api/transactions/index')));
 app.all('/api/transactions/:id',   wrap(require('./api/transactions/[id]')));
 app.all('/api/settings',           wrap(require('./api/settings/index')));
 app.all('/api/webhook/suitpay',    wrap(require('./api/webhook/suitpay')));
+app.all('/api/webhook/payfort',    wrap(require('./api/webhook/payfort')));
 app.all('/api/logs',               wrap(require('./api/logs/index')));
 
 const PORT = 3001;

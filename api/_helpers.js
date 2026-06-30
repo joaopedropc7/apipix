@@ -89,6 +89,16 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, api-key');
 }
 
+// Gera token JWT da Payfort via Basic Auth (api_key:api_secret) — expira em 60s
+async function getPayfortToken(settings) {
+  const credentials = Buffer.from(`${settings.payfort_api_key}:${settings.payfort_api_secret}`).toString('base64');
+  const { data } = await axios.post('https://api.payfortbank.com/api/auth', null, {
+    headers: { Authorization: `Basic ${credentials}` },
+    timeout: 15000,
+  });
+  return data.token;
+}
+
 function parseSuitPayDate(dateStr) {
   if (!dateStr) return null;
   try {
@@ -177,5 +187,5 @@ async function sendToUtmify(transaction, status, approvedDate = null) {
 module.exports = {
   dbSelect, dbInsert, dbUpsert, dbUpdate, dbDelete,
   getSettings, setSetting, addLog, authenticate, setCors,
-  parseSuitPayDate, toUtmifyDate, sendToUtmify,
+  parseSuitPayDate, toUtmifyDate, sendToUtmify, getPayfortToken,
 };

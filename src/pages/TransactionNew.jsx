@@ -50,16 +50,20 @@ export default function TransactionNew() {
     } finally { setLoading(false); }
   };
 
-  const configured = settings?.suitpayCsSet && settings?.suitpayCi;
+  const activeGateway = settings?.activeGateway === 'payfort' ? 'payfort' : 'suitpay';
+  const gatewayLabel = activeGateway === 'payfort' ? 'PayFort' : 'SuitPay';
+  const configured = activeGateway === 'payfort'
+    ? settings?.payfortApiSecretSet && settings?.payfortApiKey
+    : settings?.suitpayCsSet && settings?.suitpayCi;
   const webhookUrl = settings?.serverBaseUrl
-    ? `${settings.serverBaseUrl.replace(/\/$/, '')}/api/webhook/suitpay` : '';
+    ? `${settings.serverBaseUrl.replace(/\/$/, '')}/api/webhook/${activeGateway}` : '';
 
   return (
     <>
       <div className="top-bar">
         <div>
           <div className="page-title">Nova Transação PIX</div>
-          <div className="page-sub">Gerar QR Code via SuitPay</div>
+          <div className="page-sub">Gerar QR Code via {gatewayLabel}</div>
         </div>
         <Link to="/transactions" className="btn-outline-custom"><i className="bi bi-arrow-left" /> Voltar</Link>
       </div>
@@ -68,7 +72,7 @@ export default function TransactionNew() {
         {!configured && (
           <div className="alert alert-warning d-flex gap-2 align-items-center mb-3" style={{ borderRadius: '.75rem', border: 'none' }}>
             <i className="bi bi-exclamation-triangle-fill" />
-            <span>Credenciais SuitPay não configuradas. <Link to="/settings">Configurar agora</Link></span>
+            <span>Credenciais {gatewayLabel} não configuradas. <Link to="/settings">Configurar agora</Link></span>
           </div>
         )}
         {error && <div className="alert alert-danger mb-3" style={{ borderRadius: '.75rem', border: 'none', fontSize: '.85rem' }}>{error}</div>}
@@ -108,7 +112,7 @@ export default function TransactionNew() {
                   </div>
                   <div className="col-12">
                     <label className="form-label small fw-semibold text-secondary">URL de Callback (Webhook)</label>
-                    <input name="callbackUrl" type="url" className="form-control" defaultValue={webhookUrl} placeholder="https://seu-servidor.com/api/webhook/suitpay" />
+                    <input name="callbackUrl" type="url" className="form-control" defaultValue={webhookUrl} placeholder={`https://seu-servidor.com/api/webhook/${activeGateway}`} />
                     {webhookUrl && <div className="form-text text-success"><i className="bi bi-check-circle me-1" />Preenchido automaticamente</div>}
                   </div>
                 </div>
