@@ -143,14 +143,15 @@ export default function Settings() {
               </form>
             </div>
 
-            {/* Utmify */}
+            {/* Utmify — Endpoint 1 (/api/pix/generate) */}
             <div className="form-section mb-3">
               <div className="form-section-title d-flex justify-content-between">
-                <span><i className="bi bi-graph-up-arrow" /> Utmify</span>
+                <span><i className="bi bi-graph-up-arrow" /> Utmify <span className="badge bg-primary ms-1" style={{ fontSize: '.65rem' }}>Endpoint 1</span></span>
                 <span className={`badge ${settings.utmifyToken ? 'bg-success' : 'bg-secondary'}`} style={{ fontSize: '.68rem' }}>
                   {settings.utmifyToken ? 'Configurado' : 'Não configurado'}
                 </span>
               </div>
+              <div className="form-text mb-2 text-muted">Usado por: <code>/api/pix/generate</code></div>
               <form onSubmit={e => { e.preventDefault(); save('utmify', { utmifyToken: new FormData(e.target).get('utmifyToken') }); }}>
                 <div className="mb-2">
                   <label className="form-label small fw-semibold text-secondary">Token da credencial de API</label>
@@ -160,6 +161,28 @@ export default function Settings() {
                 </div>
                 <button className="btn-primary-custom" type="submit" disabled={loading.utmify}>
                   {loading.utmify ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar Token Utmify</>}
+                </button>
+              </form>
+            </div>
+
+            {/* Utmify — Endpoint 2 (/api/pix2/generate) */}
+            <div className="form-section mb-3">
+              <div className="form-section-title d-flex justify-content-between">
+                <span><i className="bi bi-graph-up-arrow" /> Utmify <span className="badge bg-secondary ms-1" style={{ fontSize: '.65rem' }}>Endpoint 2</span></span>
+                <span className={`badge ${settings.utmifyToken2 ? 'bg-success' : 'bg-secondary'}`} style={{ fontSize: '.68rem' }}>
+                  {settings.utmifyToken2 ? 'Configurado' : 'Não configurado'}
+                </span>
+              </div>
+              <div className="form-text mb-2 text-muted">Usado por: <code>/api/pix2/generate</code></div>
+              <form onSubmit={e => { e.preventDefault(); save('utmify2', { utmifyToken2: new FormData(e.target).get('utmifyToken2') }); }}>
+                <div className="mb-2">
+                  <label className="form-label small fw-semibold text-secondary">Token da credencial de API</label>
+                  <input name="utmifyToken2" className="form-control font-monospace" defaultValue={settings.utmifyToken2}
+                    placeholder="KVRxalfMiBfm8Rm1nP5YxfwYzArNsA0VLeWC" />
+                  <div className="form-text">Obtenha em: Utmify → Integrações → Webhooks → Credenciais de API</div>
+                </div>
+                <button className="btn-primary-custom" type="submit" disabled={loading.utmify2}>
+                  {loading.utmify2 ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar Token Utmify 2</>}
                 </button>
               </form>
             </div>

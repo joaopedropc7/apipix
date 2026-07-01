@@ -139,11 +139,11 @@ function toUtmifyDate(isoDate) {
   } catch { return null; }
 }
 
-async function sendToUtmify(transaction, status, approvedDate = null) {
+async function sendToUtmify(transaction, status, approvedDate = null, tokenKey = 'utmify_token') {
   await addLog('info', 'utmify', `Utmify: iniciando envio ${transaction.request_number} → ${status}`).catch(() => {});
   try {
     const settings = await getSettings();
-    const token = settings.utmify_token;
+    const token = settings[tokenKey];
     if (!token) {
       await addLog('warn', 'utmify', `Utmify: token não configurado — envio ignorado (${transaction.request_number} → ${status})`);
       return;

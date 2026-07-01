@@ -22,6 +22,7 @@ module.exports = async (req, res) => {
         apiKey:                 s.api_key || '',
         serverBaseUrl:          s.server_base_url || '',
         utmifyToken:            s.utmify_token || '',
+        utmifyToken2:           s.utmify_token_2 || '',
         supabaseConfigured:     !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
       });
     }
@@ -61,6 +62,12 @@ module.exports = async (req, res) => {
       if (action === 'utmify') {
         await setSetting('utmify_token', data.utmifyToken || '');
         await addLog('info', 'settings', 'Token Utmify atualizado');
+        return res.status(200).json({ ok: true });
+      }
+
+      if (action === 'utmify2') {
+        await setSetting('utmify_token_2', data.utmifyToken2 || '');
+        await addLog('info', 'settings', 'Token Utmify 2 atualizado');
         return res.status(200).json({ ok: true });
       }
 
