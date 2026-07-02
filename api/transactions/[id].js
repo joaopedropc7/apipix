@@ -16,9 +16,17 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === 'GET') {
-      const rows = await dbSelect('transactions', `?id=eq.${id}&select=*`);
-      if (!rows.length) return res.status(404).json({ error: 'Transação não encontrada' });
-      const tx = rows[0];
+      // Busca por id (UUID), id_transaction ou request_number — o que vier na URL
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const queries = [
+        dbSelect('transactions', `?id_transaction=eq.${id}&limit=1`),
+        dbSelect('transactions', `?request_number=eq.${id}&limit=1`),
+      ];
+      if (isUuid) queries.unshift(dbSelect('transactions', `?id=eq.${id}&limit=1`));
+
+      const results = await Promise.all(queries);
+      const tx = results.find(r => r.length > 0)?.[0];
+      if (!tx) return res.status(404).json({ error: 'Transação não encontrada' });
 
       // Garante que raw_request é objeto (não string)
       if (typeof tx.raw_request === 'string') {
