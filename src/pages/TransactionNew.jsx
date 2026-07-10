@@ -50,10 +50,12 @@ export default function TransactionNew() {
     } finally { setLoading(false); }
   };
 
-  const activeGateway = settings?.activeGateway === 'payfort' ? 'payfort' : 'suitpay';
-  const gatewayLabel = activeGateway === 'payfort' ? 'PayFort' : 'SuitPay';
+  const activeGateway = ['payfort', 'bynet'].includes(settings?.activeGateway) ? settings.activeGateway : 'suitpay';
+  const gatewayLabel = activeGateway === 'payfort' ? 'PayFort' : activeGateway === 'bynet' ? 'ByNet' : 'SuitPay';
   const configured = activeGateway === 'payfort'
     ? settings?.payfortApiSecretSet && settings?.payfortApiKey
+    : activeGateway === 'bynet'
+    ? !!settings?.bynetApiKey
     : settings?.suitpayCsSet && settings?.suitpayCi;
   const webhookUrl = settings?.serverBaseUrl
     ? `${settings.serverBaseUrl.replace(/\/$/, '')}/api/webhook/${activeGateway}` : '';

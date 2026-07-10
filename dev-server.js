@@ -44,6 +44,7 @@ app.all('/api/webhook/suitpay',    wrap(require('./api/webhook/suitpay')));
 app.all('/api/webhook/payfort',    wrap(require('./api/webhook/payfort')));
 app.all('/api/webhook/suitpay2',   wrap(require('./api/webhook/suitpay2')));
 app.all('/api/webhook/payfort2',   wrap(require('./api/webhook/payfort2')));
+app.all('/api/webhook/bynet',      wrap(require('./api/webhook/bynet')));
 app.all('/api/pix2/:action', (req, res) => {
   setQuery(req, { action: req.params.action });
   require('./api/pix2')(req, res);

@@ -18,6 +18,7 @@ module.exports = async (req, res) => {
         payfortApiKey:          s.payfort_api_key || '',
         payfortApiSecret:       s.payfort_api_secret ? '••••••••' : '',
         payfortApiSecretSet:    !!s.payfort_api_secret,
+        bynetApiKey:            s.bynet_api_key || '',
         activeGateway:          s.active_gateway || 'suitpay',
         apiKey:                 s.api_key || '',
         serverBaseUrl:          s.server_base_url || '',
@@ -46,8 +47,14 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true });
       }
 
+      if (action === 'bynet') {
+        await setSetting('bynet_api_key', data.apiKey || '');
+        await addLog('info', 'settings', 'API Key ByNet atualizada');
+        return res.status(200).json({ ok: true });
+      }
+
       if (action === 'gateway') {
-        const gw = data.activeGateway === 'payfort' ? 'payfort' : 'suitpay';
+        const gw = ['payfort', 'bynet'].includes(data.activeGateway) ? data.activeGateway : 'suitpay';
         await setSetting('active_gateway', gw);
         await addLog('info', 'settings', `Gateway ativo alterado para: ${gw}`);
         return res.status(200).json({ ok: true });

@@ -53,10 +53,11 @@ export default function Settings() {
             <div className="form-section mb-3">
               <div className="form-section-title"><i className="bi bi-toggles" /> Gateway de Pagamento Ativo</div>
               <p className="text-secondary small mb-3">Apenas um gateway pode estar ativo por vez. Novas transações usarão o gateway selecionado.</p>
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 flex-wrap">
                 {[
                   ['suitpay', 'SuitPay', 'bi-qr-code-scan'],
                   ['payfort', 'PayFort', 'bi-bank'],
+                  ['bynet',   'ByNet',   'bi-lightning-charge'],
                 ].map(([value, label, icon]) => (
                   <button
                     key={value}
@@ -139,6 +140,27 @@ export default function Settings() {
                 </div>
                 <button className="btn-primary-custom" type="submit" disabled={loading.payfort}>
                   {loading.payfort ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar PayFort</>}
+                </button>
+              </form>
+            </div>
+
+            {/* ByNet */}
+            <div className="form-section mb-3">
+              <div className="form-section-title d-flex justify-content-between">
+                <span><i className="bi bi-lightning-charge" /> Credenciais ByNet</span>
+                <span className={`badge ${settings.bynetApiKey ? 'bg-success' : 'bg-warning text-dark'}`} style={{ fontSize: '.68rem' }}>
+                  {settings.bynetApiKey ? 'Configurado' : 'Não configurado'}
+                </span>
+              </div>
+              <form onSubmit={e => { e.preventDefault(); save('bynet', { apiKey: new FormData(e.target).get('apiKey') }); }}>
+                <div className="mb-3">
+                  <label className="form-label small fw-semibold text-secondary">x-api-key</label>
+                  <input name="apiKey" className="form-control font-monospace" defaultValue={settings.bynetApiKey}
+                    placeholder="Cole aqui a API Key da ByNet" />
+                  <div className="form-text">Obtida no painel da TechByNet → API Keys</div>
+                </div>
+                <button className="btn-primary-custom" type="submit" disabled={loading.bynet}>
+                  {loading.bynet ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar ByNet</>}
                 </button>
               </form>
             </div>
