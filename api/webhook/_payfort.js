@@ -7,7 +7,7 @@ const STATUS_BY_FIELD = {
   refunded: 'refunded',
 };
 
-module.exports = async (req, res) => {
+module.exports = async (req, res, tokenKey = 'utmify_token') => {
   if (req.method !== 'POST') return res.status(405).end();
 
   const p = req.body;
@@ -18,12 +18,12 @@ module.exports = async (req, res) => {
   }).catch(() => {});
 
   if (p.type !== 'transaction') {
-    await addLog('info', 'webhook', `Evento Payfort2 ignorado (tipo ${p.type}): ${p.event}`, p);
+    await addLog('info', 'webhook', `Evento Payfort ignorado (tipo ${p.type}): ${p.event}`, p);
     return res.status(200).json({ ok: true });
   }
 
   if (p.event === 'infraction') {
-    await addLog('warn', 'webhook', `Infração PIX recebida (pix2): ${p.transaction?.id}`, p);
+    await addLog('warn', 'webhook', `Infração PIX recebida: ${p.transaction?.id}`, p);
     return res.status(200).json({ ok: true });
   }
 
@@ -33,20 +33,20 @@ module.exports = async (req, res) => {
     : STATUS_BY_FIELD[p.transaction?.status] || null;
 
   if (!newStatus) {
-    await addLog('warn', 'webhook', `Evento Payfort2 não mapeado: ${p.event}`, p);
+    await addLog('warn', 'webhook', `Evento Payfort não mapeado: ${p.event}`, p);
     return res.status(200).json({ ok: true, warning: `Evento não mapeado: ${p.event}` });
   }
 
   const txId = p.transaction?.id;
   if (!txId) {
-    await addLog('warn', 'webhook', 'Webhook Payfort2 sem transaction.id', p);
+    await addLog('warn', 'webhook', 'Webhook Payfort sem transaction.id', p);
     return res.status(200).json({ ok: true });
   }
 
   const rows = await dbSelect('transactions', `?id_transaction=eq.${txId}`);
   const transaction = rows[0];
   if (!transaction) {
-    await addLog('warn', 'webhook', `Transação Payfort2 não encontrada: ${txId}`, p);
+    await addLog('warn', 'webhook', `Transação Payfort não encontrada: ${txId}`, p);
     return res.status(200).json({ ok: true, warning: 'Transação não encontrada' });
   }
 
@@ -63,14 +63,14 @@ module.exports = async (req, res) => {
   await dbUpdate('transactions', `id=eq.${transaction.id}`, update);
 
   await addLog('info', 'webhook',
-    `Pagamento Payfort2 ${newStatus === 'paid' ? 'CONFIRMADO ✅' : newStatus.toUpperCase()}: pedido #${transaction.request_number}`,
-    { idTransaction: txId, status: newStatus, payerName: payerInfo.name, amount: p.transaction.amount }
+    `Pagamento Payfort ${newStatus === 'paid' ? 'CONFIRMADO ✅' : newStatus.toUpperCase()}: pedido #${transaction.request_number}`,
+    { idTransaction: txId, status: newStatus, payerName: payerInfo.name, payerTaxId: payerInfo.document, amount: p.transaction.amount }
   );
 
   if (newStatus === 'paid') {
     const fullTx = { ...transaction, ...update, raw_request: transaction.raw_request };
     await Promise.race([
-      sendToUtmify(fullTx, 'paid', update.payment_date, 'utmify_token_2'),
+      sendToUtmify(fullTx, 'paid', update.payment_date, tokenKey),
       new Promise(resolve => setTimeout(resolve, 8000)),
     ]);
   }

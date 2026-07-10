@@ -40,11 +40,11 @@ app.all('/api/dashboard',          wrap(require('./api/dashboard')));
 app.all('/api/transactions',       wrap(require('./api/transactions/index')));
 app.all('/api/transactions/:id',   wrap(require('./api/transactions/[id]')));
 app.all('/api/settings',           wrap(require('./api/settings/index')));
-app.all('/api/webhook/suitpay',    wrap(require('./api/webhook/suitpay')));
-app.all('/api/webhook/payfort',    wrap(require('./api/webhook/payfort')));
-app.all('/api/webhook/suitpay2',   wrap(require('./api/webhook/suitpay2')));
-app.all('/api/webhook/payfort2',   wrap(require('./api/webhook/payfort2')));
-app.all('/api/webhook/bynet',      wrap(require('./api/webhook/bynet')));
+const webhookRouter = require('./api/webhook/[gateway]');
+app.all('/api/webhook/:gateway', (req, res) => {
+  setQuery(req, { gateway: req.params.gateway });
+  webhookRouter(req, res);
+});
 app.all('/api/pix2/:action', (req, res) => {
   setQuery(req, { action: req.params.action });
   require('./api/pix2')(req, res);

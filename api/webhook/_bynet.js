@@ -9,7 +9,7 @@ const STATUS_MAP = {
   canceled:        'cancelled',
 };
 
-module.exports = async (req, res) => {
+module.exports = async (req, res, tokenKey = 'utmify_token') => {
   if (req.method !== 'POST') return res.status(405).end();
 
   const p = req.body;
@@ -24,13 +24,12 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true });
   }
 
-  const txId     = p.objectId || p.data?.id;
-  const status   = (p.data?.status || '').toLowerCase();
-  const newStatus = STATUS_MAP[status];
+  const txId      = p.objectId || p.data?.id;
+  const newStatus = STATUS_MAP[(p.data?.status || '').toLowerCase()];
 
   if (!newStatus) {
-    await addLog('warn', 'webhook', `Status ByNet não mapeado: ${status}`, p);
-    return res.status(200).json({ ok: true, warning: `Status não mapeado: ${status}` });
+    await addLog('warn', 'webhook', `Status ByNet não mapeado: ${p.data?.status}`, p);
+    return res.status(200).json({ ok: true, warning: `Status não mapeado: ${p.data?.status}` });
   }
 
   if (!txId) {
@@ -50,7 +49,7 @@ module.exports = async (req, res) => {
     status:       newStatus,
     updated_at:   new Date().toISOString(),
     payment_date: newStatus === 'paid' ? (p.data?.paidAt || new Date().toISOString()) : transaction.payment_date,
-    payer_name:   payer.name     || transaction.payer_name,
+    payer_name:   payer.name           || transaction.payer_name,
     payer_tax_id: payer.documentNumber || transaction.payer_tax_id,
     paid_value:   p.data?.amount != null ? p.data.amount / 100 : transaction.paid_value,
   };
@@ -65,7 +64,7 @@ module.exports = async (req, res) => {
   if (newStatus === 'paid') {
     const fullTx = { ...transaction, ...update, raw_request: transaction.raw_request };
     await Promise.race([
-      sendToUtmify(fullTx, 'paid', update.payment_date),
+      sendToUtmify(fullTx, 'paid', update.payment_date, tokenKey),
       new Promise(resolve => setTimeout(resolve, 8000)),
     ]);
   }

@@ -3,13 +3,9 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
-    "api/pix.js":               { "maxDuration": 30 },
-    "api/pix2.js":              { "maxDuration": 30 },
-    "api/webhook/payfort.js":   { "maxDuration": 30 },
-    "api/webhook/suitpay.js":   { "maxDuration": 30 },
-    "api/webhook/payfort2.js":  { "maxDuration": 30 },
-    "api/webhook/suitpay2.js":  { "maxDuration": 30 },
-    "api/webhook/bynet.js":     { "maxDuration": 30 }
+    "api/pix.js":                   { "maxDuration": 30 },
+    "api/pix2.js":                  { "maxDuration": 30 },
+    "api/webhook/[gateway].js":     { "maxDuration": 30 }
   },
   "rewrites": [
     { "source": "/api/auth/:action",  "destination": "/api/auth?action=:action"  },

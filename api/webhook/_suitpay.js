@@ -11,12 +11,11 @@ const STATUS_MAP = {
   PROCESSING: 'pending',
 };
 
-module.exports = async (req, res) => {
+module.exports = async (req, res, tokenKey = 'utmify_token') => {
   if (req.method !== 'POST') return res.status(405).end();
 
   const p = req.body;
 
-  // Salva webhook bruto para auditoria
   await dbInsert('webhooks', {
     id_transaction: p.idTransaction || null,
     payload: p,
@@ -29,7 +28,6 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true, warning: `Status não mapeado: ${p.statusTransaction}` });
   }
 
-  // Localiza transação por idTransaction ou requestNumber
   let transaction = null;
   if (p.idTransaction) {
     const rows = await dbSelect('transactions', `?id_transaction=eq.${p.idTransaction}`);
@@ -45,7 +43,6 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true, warning: 'Transação não encontrada' });
   }
 
-  // Monta atualização completa
   const update = {
     status:       newStatus,
     updated_at:   new Date().toISOString(),
@@ -59,22 +56,14 @@ module.exports = async (req, res) => {
 
   await addLog('info', 'webhook',
     `Pagamento ${newStatus === 'paid' ? 'CONFIRMADO ✅' : newStatus.toUpperCase()}: pedido #${transaction.request_number}`,
-    {
-      idTransaction: p.idTransaction,
-      requestNumber: p.requestNumber,
-      status:        newStatus,
-      payerName:     p.payerName,
-      payerTaxId:    p.payerTaxId,
-      value:         p.value,
-      paymentDate:   p.paymentDate,
-    }
+    { idTransaction: p.idTransaction, requestNumber: p.requestNumber, status: newStatus, payerName: p.payerName, payerTaxId: p.payerTaxId, value: p.value, paymentDate: p.paymentDate }
   );
 
   if (newStatus === 'paid') {
     const paymentDate = parseSuitPayDate(p.paymentDate) || new Date().toISOString();
     const fullTx = { ...transaction, ...update, raw_request: transaction.raw_request };
     await Promise.race([
-      sendToUtmify(fullTx, 'paid', paymentDate),
+      sendToUtmify(fullTx, 'paid', paymentDate, tokenKey),
       new Promise(resolve => setTimeout(resolve, 8000)),
     ]);
   }
