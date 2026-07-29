@@ -28,7 +28,8 @@ INSERT INTO settings (key, value) VALUES
   ('payfort_account_id',  ''),
   ('payfort_api_key',     ''),
   ('payfort_api_secret',  ''),
-  ('bynet_api_key',       '')
+  ('bynet_api_key',       ''),
+  ('umbrella_api_key',    '')
 ON CONFLICT (key) DO NOTHING;
 
 -- ----------------------------------------------------------------

@@ -19,6 +19,7 @@ module.exports = async (req, res) => {
         payfortApiSecret:       s.payfort_api_secret ? '••••••••' : '',
         payfortApiSecretSet:    !!s.payfort_api_secret,
         bynetApiKey:            s.bynet_api_key || '',
+        umbrellaApiKey:         s.umbrella_api_key || '',
         activeGateway:          s.active_gateway || 'suitpay',
         activeGateway2:         s.active_gateway_2 || 'suitpay',
         apiKey:                 s.api_key || '',
@@ -54,15 +55,21 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true });
       }
 
+      if (action === 'umbrella') {
+        await setSetting('umbrella_api_key', data.apiKey || '');
+        await addLog('info', 'settings', 'API Key Umbrella atualizada');
+        return res.status(200).json({ ok: true });
+      }
+
       if (action === 'gateway') {
-        const gw = ['payfort', 'bynet'].includes(data.activeGateway) ? data.activeGateway : 'suitpay';
+        const gw = ['payfort', 'bynet', 'umbrella'].includes(data.activeGateway) ? data.activeGateway : 'suitpay';
         await setSetting('active_gateway', gw);
         await addLog('info', 'settings', `Gateway ativo (endpoint 1) alterado para: ${gw}`);
         return res.status(200).json({ ok: true });
       }
 
       if (action === 'gateway2') {
-        const gw = ['payfort', 'bynet'].includes(data.activeGateway2) ? data.activeGateway2 : 'suitpay';
+        const gw = ['payfort', 'bynet', 'umbrella'].includes(data.activeGateway2) ? data.activeGateway2 : 'suitpay';
         await setSetting('active_gateway_2', gw);
         await addLog('info', 'settings', `Gateway ativo (endpoint 2) alterado para: ${gw}`);
         return res.status(200).json({ ok: true });

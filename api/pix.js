@@ -49,7 +49,7 @@ module.exports = async (req, res) => {
 
   // POST /api/pix?action=generate
   if (action === 'generate' && req.method === 'POST') {
-    const gateway = ['payfort', 'bynet'].includes(settings.active_gateway) ? settings.active_gateway : 'suitpay';
+    const gateway = ['payfort', 'bynet', 'umbrella'].includes(settings.active_gateway) ? settings.active_gateway : 'suitpay';
 
     if (gateway === 'suitpay' && (!settings.suitpay_ci || !settings.suitpay_cs)) {
       return res.status(503).json({ error: 'Credenciais SuitPay não configuradas no painel admin' });
@@ -59,6 +59,9 @@ module.exports = async (req, res) => {
     }
     if (gateway === 'bynet' && !settings.bynet_api_key) {
       return res.status(503).json({ error: 'API Key ByNet não configurada no painel admin' });
+    }
+    if (gateway === 'umbrella' && !settings.umbrella_api_key) {
+      return res.status(503).json({ error: 'API Key Umbrella não configurada no painel admin' });
     }
 
     const body = req.body;
@@ -102,6 +105,7 @@ module.exports = async (req, res) => {
     const serverBase = settings.server_base_url?.trim().replace(/\/$/, '');
     const webhookPath = gateway === 'payfort' ? '/api/webhook/payfort'
       : gateway === 'bynet' ? '/api/webhook/bynet'
+      : gateway === 'umbrella' ? '/api/webhook/umbrella'
       : '/api/webhook/suitpay';
     body.callbackUrl = serverBase ? `${serverBase}${webhookPath}` : '';
 
@@ -171,7 +175,12 @@ module.exports = async (req, res) => {
         idTransaction     = data.data?.id;
         paymentCode       = data.data?.pix?.emv;
         paymentCodeBase64 = data.data?.pix?.qrCode;
-      } else if (gateway === 'bynet') {
+      } else if (gateway === 'bynet' || gateway === 'umbrella') {
+        // ByNet e Umbrella usam exatamente a mesma API — muda só a URL base e a key
+        const baseUrl = gateway === 'umbrella'
+          ? 'https://api-gateway.umbrellapag.com/api'
+          : 'https://api-gateway.techbynet.com/api';
+        const gwApiKey = gateway === 'umbrella' ? settings.umbrella_api_key : settings.bynet_api_key;
         const amountInCents = Math.round(amount * 100);
         const payload = {
           amount:        amountInCents,
@@ -195,8 +204,8 @@ module.exports = async (req, res) => {
           },
           postbackUrl: body.callbackUrl || undefined,
         };
-        const resp = await axios.post('https://api-gateway.techbynet.com/api/user/transactions', payload, {
-          headers: { 'x-api-key': settings.bynet_api_key, 'Content-Type': 'application/json' },
+        const resp = await axios.post(`${baseUrl}/user/transactions`, payload, {
+          headers: { 'x-api-key': gwApiKey, 'Content-Type': 'application/json' },
           timeout: 30000,
         });
         data              = resp.data;

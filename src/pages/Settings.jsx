@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getSettings, saveSettings } from '../api/client';
 
-const gatewayLabel = (gw) => ({ suitpay: 'SuitPay', payfort: 'PayFort', bynet: 'ByNet' }[gw] || 'SuitPay');
+const gatewayLabel = (gw) => ({ suitpay: 'SuitPay', payfort: 'PayFort', bynet: 'ByNet', umbrella: 'Umbrella' }[gw] || 'SuitPay');
 
 function Toast({ msg, type, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
@@ -57,9 +57,10 @@ export default function Settings() {
               <div className="form-text mb-2 text-muted">Usado por: <code>/api/pix/generate</code> → Utmify Endpoint 1</div>
               <div className="d-flex gap-2 flex-wrap">
                 {[
-                  ['suitpay', 'SuitPay', 'bi-qr-code-scan'],
-                  ['payfort', 'PayFort', 'bi-bank'],
-                  ['bynet',   'ByNet',   'bi-lightning-charge'],
+                  ['suitpay',  'SuitPay',  'bi-qr-code-scan'],
+                  ['payfort',  'PayFort',  'bi-bank'],
+                  ['bynet',    'ByNet',    'bi-lightning-charge'],
+                  ['umbrella', 'Umbrella', 'bi-umbrella'],
                 ].map(([value, label, icon]) => (
                   <button
                     key={value}
@@ -81,9 +82,10 @@ export default function Settings() {
               <div className="form-text mb-2 text-muted">Usado por: <code>/api/pix2/generate</code> → Utmify Endpoint 2</div>
               <div className="d-flex gap-2 flex-wrap">
                 {[
-                  ['suitpay', 'SuitPay', 'bi-qr-code-scan'],
-                  ['payfort', 'PayFort', 'bi-bank'],
-                  ['bynet',   'ByNet',   'bi-lightning-charge'],
+                  ['suitpay',  'SuitPay',  'bi-qr-code-scan'],
+                  ['payfort',  'PayFort',  'bi-bank'],
+                  ['bynet',    'ByNet',    'bi-lightning-charge'],
+                  ['umbrella', 'Umbrella', 'bi-umbrella'],
                 ].map(([value, label, icon]) => (
                   <button
                     key={value}
@@ -187,6 +189,27 @@ export default function Settings() {
                 </div>
                 <button className="btn-primary-custom" type="submit" disabled={loading.bynet}>
                   {loading.bynet ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar ByNet</>}
+                </button>
+              </form>
+            </div>
+
+            {/* Umbrella */}
+            <div className="form-section mb-3">
+              <div className="form-section-title d-flex justify-content-between">
+                <span><i className="bi bi-umbrella" /> Credenciais Umbrella</span>
+                <span className={`badge ${settings.umbrellaApiKey ? 'bg-success' : 'bg-warning text-dark'}`} style={{ fontSize: '.68rem' }}>
+                  {settings.umbrellaApiKey ? 'Configurado' : 'Não configurado'}
+                </span>
+              </div>
+              <form onSubmit={e => { e.preventDefault(); save('umbrella', { apiKey: new FormData(e.target).get('apiKey') }); }}>
+                <div className="mb-3">
+                  <label className="form-label small fw-semibold text-secondary">x-api-key</label>
+                  <input name="apiKey" className="form-control font-monospace" defaultValue={settings.umbrellaApiKey}
+                    placeholder="Cole aqui a API Key da Umbrella" />
+                  <div className="form-text">Painel da UmbrellaPag → API Keys</div>
+                </div>
+                <button className="btn-primary-custom" type="submit" disabled={loading.umbrella}>
+                  {loading.umbrella ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar Umbrella</>}
                 </button>
               </form>
             </div>
