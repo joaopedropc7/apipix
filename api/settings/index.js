@@ -20,6 +20,7 @@ module.exports = async (req, res) => {
         payfortApiSecretSet:    !!s.payfort_api_secret,
         bynetApiKey:            s.bynet_api_key || '',
         activeGateway:          s.active_gateway || 'suitpay',
+        activeGateway2:         s.active_gateway_2 || 'suitpay',
         apiKey:                 s.api_key || '',
         serverBaseUrl:          s.server_base_url || '',
         utmifyToken:            s.utmify_token || '',
@@ -56,7 +57,14 @@ module.exports = async (req, res) => {
       if (action === 'gateway') {
         const gw = ['payfort', 'bynet'].includes(data.activeGateway) ? data.activeGateway : 'suitpay';
         await setSetting('active_gateway', gw);
-        await addLog('info', 'settings', `Gateway ativo alterado para: ${gw}`);
+        await addLog('info', 'settings', `Gateway ativo (endpoint 1) alterado para: ${gw}`);
+        return res.status(200).json({ ok: true });
+      }
+
+      if (action === 'gateway2') {
+        const gw = ['payfort', 'bynet'].includes(data.activeGateway2) ? data.activeGateway2 : 'suitpay';
+        await setSetting('active_gateway_2', gw);
+        await addLog('info', 'settings', `Gateway ativo (endpoint 2) alterado para: ${gw}`);
         return res.status(200).json({ ok: true });
       }
 

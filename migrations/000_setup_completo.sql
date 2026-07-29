@@ -22,6 +22,7 @@ INSERT INTO settings (key, value) VALUES
   ('api_key',             ''),
   ('server_base_url',     ''),
   ('active_gateway',      'suitpay'),
+  ('active_gateway_2',    'suitpay'),
   ('utmify_token',        ''),
   ('utmify_token_2',      ''),
   ('payfort_account_id',  ''),

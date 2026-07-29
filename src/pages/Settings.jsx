@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getSettings, saveSettings } from '../api/client';
 
+const gatewayLabel = (gw) => ({ suitpay: 'SuitPay', payfort: 'PayFort', bynet: 'ByNet' }[gw] || 'SuitPay');
+
 function Toast({ msg, type, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
   return (
@@ -49,10 +51,10 @@ export default function Settings() {
         <div className="row g-3">
           <div className="col-lg-7">
 
-            {/* Gateway ativo */}
+            {/* Gateway ativo — Endpoint 1 (/api/pix) */}
             <div className="form-section mb-3">
-              <div className="form-section-title"><i className="bi bi-toggles" /> Gateway de Pagamento Ativo</div>
-              <p className="text-secondary small mb-3">Apenas um gateway pode estar ativo por vez. Novas transações usarão o gateway selecionado.</p>
+              <div className="form-section-title"><i className="bi bi-toggles" /> Gateway Ativo <span className="badge bg-primary ms-1" style={{ fontSize: '.65rem' }}>Endpoint 1</span></div>
+              <div className="form-text mb-2 text-muted">Usado por: <code>/api/pix/generate</code> → Utmify Endpoint 1</div>
               <div className="d-flex gap-2 flex-wrap">
                 {[
                   ['suitpay', 'SuitPay', 'bi-qr-code-scan'],
@@ -68,6 +70,30 @@ export default function Settings() {
                   >
                     <i className={`bi ${icon} me-1`} /> {label}
                     {settings.activeGateway === value && <i className="bi bi-check-circle-fill ms-2" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Gateway ativo — Endpoint 2 (/api/pix2) */}
+            <div className="form-section mb-3">
+              <div className="form-section-title"><i className="bi bi-toggles" /> Gateway Ativo <span className="badge bg-secondary ms-1" style={{ fontSize: '.65rem' }}>Endpoint 2</span></div>
+              <div className="form-text mb-2 text-muted">Usado por: <code>/api/pix2/generate</code> → Utmify Endpoint 2</div>
+              <div className="d-flex gap-2 flex-wrap">
+                {[
+                  ['suitpay', 'SuitPay', 'bi-qr-code-scan'],
+                  ['payfort', 'PayFort', 'bi-bank'],
+                  ['bynet',   'ByNet',   'bi-lightning-charge'],
+                ].map(([value, label, icon]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`btn ${settings.activeGateway2 === value ? 'btn-primary-custom' : 'btn-outline-secondary'} flex-fill`}
+                    disabled={loading.gateway2 || settings.activeGateway2 === value}
+                    onClick={() => save('gateway2', { activeGateway2: value })}
+                  >
+                    <i className={`bi ${icon} me-1`} /> {label}
+                    {settings.activeGateway2 === value && <i className="bi bi-check-circle-fill ms-2" />}
                   </button>
                 ))}
               </div>
@@ -282,7 +308,8 @@ export default function Settings() {
                 <div className="fw-bold mb-3"><i className="bi bi-info-circle text-primary me-2" />Status</div>
                 {[
                   ['Usuário admin', settings.adminUser],
-                  ['Gateway ativo', settings.activeGateway === 'payfort' ? 'PayFort' : 'SuitPay'],
+                  ['Gateway Endpoint 1', gatewayLabel(settings.activeGateway)],
+                  ['Gateway Endpoint 2', gatewayLabel(settings.activeGateway2)],
                   ['Ambiente SuitPay', settings.suitpayEnvironment],
                   ['Supabase', settings.supabaseConfigured ? '✅ Conectado' : '❌ Não configurado'],
                 ].map(([l, v]) => (

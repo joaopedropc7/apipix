@@ -8,6 +8,7 @@ const HANDLERS = {
   suitpay:  (req, res) => suitpayHandler(req, res, 'utmify_token'),
   suitpay2: (req, res) => suitpayHandler(req, res, 'utmify_token_2'),
   bynet:    (req, res) => bynetHandler(req, res,   'utmify_token'),
+  bynet2:   (req, res) => bynetHandler(req, res,   'utmify_token_2'),
 };
 
 module.exports = async (req, res) => {
