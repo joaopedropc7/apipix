@@ -1,21 +1,14 @@
-const { dbSelect, dbUpdate, getSettings, authenticate, addLog } = require('../_helpers');
+const { dbSelect, dbUpdate, getSettings, authenticate, addLog, setCors } = require('../_helpers');
 
 module.exports = async (req, res) => {
-  // Aceita autenticação por cookie JWT (painel admin) OU por api-key header (API externa)
-  const apiKey = req.headers['api-key'] || req.headers['x-api-key'];
-  if (apiKey) {
-    const settings = await getSettings();
-    if (!settings.api_key || apiKey !== settings.api_key) {
-      return res.status(401).json({ error: 'API Key inválida' });
-    }
-  } else {
-    if (!authenticate(req, res)) return;
-  }
+  setCors(res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { id } = req.query;
 
   try {
     if (req.method === 'GET') {
+      // Consulta pública — liberada para o navegador, sem api-key
       // Busca por id (UUID), id_transaction ou request_number — o que vier na URL
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
       const queries = [
@@ -37,6 +30,17 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'PATCH' && req.body?.action === 'cancel') {
+      // Cancelamento continua protegido: cookie JWT (painel) OU api-key (API externa)
+      const apiKey = req.headers['api-key'] || req.headers['x-api-key'];
+      if (apiKey) {
+        const settings = await getSettings();
+        if (!settings.api_key || apiKey !== settings.api_key) {
+          return res.status(401).json({ error: 'API Key inválida' });
+        }
+      } else if (!authenticate(req, res)) {
+        return;
+      }
+
       await dbUpdate('transactions', `id=eq.${id}`, {
         status: 'cancelled',
         updated_at: new Date().toISOString(),
