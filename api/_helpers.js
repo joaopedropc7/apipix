@@ -1,6 +1,5 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), override: true });
 const axios = require('axios');
-const https = require('https');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 
@@ -88,48 +87,6 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, api-key');
-}
-
-// Gera token JWT da Payfort via Basic Auth (api_key:api_secret) — expira em 60s
-// Usa https nativo (não axios): a Payfort retorna 500 se a requisição tiver
-// Content-Type, e o axios sempre injeta um por padrão mesmo sem body.
-function getPayfortToken(settings) {
-  const credentials = Buffer.from(`${settings.payfort_api_key}:${settings.payfort_api_secret}`).toString('base64');
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: 'api.payfortbank.com',
-      path:     '/api/auth',
-      method:   'POST',
-      headers:  { Authorization: `Basic ${credentials}` },
-      timeout:  15000,
-    }, (res) => {
-      let body = '';
-      res.on('data', chunk => { body += chunk; });
-      res.on('end', () => {
-        let parsed;
-        try { parsed = JSON.parse(body); } catch { parsed = { message: body }; }
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(parsed.token);
-        } else {
-          const err = new Error(`Payfort auth failed: ${res.statusCode}`);
-          err.response = { status: res.statusCode, data: parsed };
-          reject(err);
-        }
-      });
-    });
-    req.on('error', reject);
-    req.on('timeout', () => req.destroy(new Error('Payfort auth timeout')));
-    req.end();
-  });
-}
-
-function parseSuitPayDate(dateStr) {
-  if (!dateStr) return null;
-  try {
-    const [datePart, timePart] = dateStr.split(' ');
-    const [day, month, year] = datePart.split('/');
-    return new Date(`${year}-${month}-${day}T${timePart}`).toISOString();
-  } catch { return null; }
 }
 
 function toUtmifyDate(isoDate) {
@@ -234,5 +191,5 @@ async function sendToUtmify(transaction, status, approvedDate = null, tokenKey =
 module.exports = {
   dbSelect, dbInsert, dbUpsert, dbUpdate, dbDelete,
   getSettings, setSetting, addLog, authenticate, setCors,
-  parseSuitPayDate, toUtmifyDate, sendToUtmify, getPayfortToken,
+  toUtmifyDate, sendToUtmify,
 };

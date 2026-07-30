@@ -19,7 +19,7 @@ export default function Layout() {
           <div className="logo-mark"><i className="bi bi-qr-code-scan" /></div>
           <div>
             <span className="logo-title">PIX Admin</span>
-            <span className="logo-sub">SuitPay Integration</span>
+            <span className="logo-sub">PIX Gateway Integration</span>
           </div>
         </div>
 

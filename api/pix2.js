@@ -1,7 +1,7 @@
 const axios = require('axios');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const { dbInsert, dbSelect, dbUpdate, getSettings, addLog, setCors, sendToUtmify, getPayfortToken } = require('./_helpers');
+const { dbInsert, dbSelect, dbUpdate, getSettings, addLog, setCors, sendToUtmify } = require('./_helpers');
 
 module.exports = async (req, res) => {
   setCors(res);
@@ -49,20 +49,12 @@ module.exports = async (req, res) => {
 
   // POST /api/pix2?action=generate
   if (action === 'generate' && req.method === 'POST') {
-    // Endpoint 2 tem seu próprio gateway ativo, independente do endpoint 1
-    const gateway = ['payfort', 'bynet', 'umbrella'].includes(settings.active_gateway_2) ? settings.active_gateway_2 : 'suitpay';
+    // Endpoint 2 — gateway e credenciais próprios, independentes do endpoint 1
+    const gateway = settings.active_gateway_2 === 'umbrella' ? 'umbrella' : 'bynet';
+    const gwApiKey = gateway === 'umbrella' ? settings.umbrella_api_key_2 : settings.bynet_api_key_2;
 
-    if (gateway === 'suitpay' && (!settings.suitpay_ci || !settings.suitpay_cs)) {
-      return res.status(503).json({ error: 'Credenciais SuitPay não configuradas no painel admin' });
-    }
-    if (gateway === 'payfort' && (!settings.payfort_api_key || !settings.payfort_api_secret)) {
-      return res.status(503).json({ error: 'Credenciais Payfort não configuradas no painel admin' });
-    }
-    if (gateway === 'bynet' && !settings.bynet_api_key) {
-      return res.status(503).json({ error: 'API Key ByNet não configurada no painel admin' });
-    }
-    if (gateway === 'umbrella' && !settings.umbrella_api_key) {
-      return res.status(503).json({ error: 'API Key Umbrella não configurada no painel admin' });
+    if (!gwApiKey) {
+      return res.status(503).json({ error: `API Key ${gateway === 'umbrella' ? 'Umbrella' : 'ByNet'} (endpoint 2) não configurada no painel admin` });
     }
 
     const body = req.body;
@@ -103,10 +95,7 @@ module.exports = async (req, res) => {
 
     const serverBase = settings.server_base_url?.trim().replace(/\/$/, '');
     // Webhooks dedicados ao endpoint 2 — encaminham para utmify_token_2
-    const webhookPath = gateway === 'payfort' ? '/api/webhook/payfort2'
-      : gateway === 'bynet' ? '/api/webhook/bynet2'
-      : gateway === 'umbrella' ? '/api/webhook/umbrella2'
-      : '/api/webhook/suitpay2';
+    const webhookPath = gateway === 'umbrella' ? '/api/webhook/umbrella2' : '/api/webhook/bynet2';
     body.callbackUrl = serverBase ? `${serverBase}${webhookPath}` : '';
 
     let reserved;
@@ -151,78 +140,41 @@ module.exports = async (req, res) => {
     try {
       let idTransaction, paymentCode, paymentCodeBase64, data;
 
-      if (gateway === 'payfort') {
-        const token = await getPayfortToken(settings);
-        const payload = {
-          amountInCents: Math.round(amount * 100),
-          description:   `Pedido ${body.requestNumber}`.slice(0, 140),
-          postbackUrl:   body.callbackUrl || undefined,
-          customer: {
-            name:         body.client.name,
-            email:        body.client.email || undefined,
-            documentType: document.length > 11 ? 'cnpj' : 'cpf',
-            document,
-            phone:        body.client.phoneNumber || undefined,
+      // ByNet e Umbrella usam exatamente a mesma API — muda só a URL base e a key
+      const baseUrl = gateway === 'umbrella'
+        ? 'https://api-gateway.umbrellapag.com/api'
+        : 'https://api-gateway.techbynet.com/api';
+      const amountInCents = Math.round(amount * 100);
+      const payload = {
+        amount:        amountInCents,
+        paymentMethod: 'PIX',
+        pix:           { expiresInDays: 1 },
+        items: [{
+          title:       `Pedido ${body.requestNumber}`,
+          quantity:    1,
+          tangible:    false,
+          unitPrice:   amountInCents,
+          externalRef: body.requestNumber,
+        }],
+        customer: {
+          name:  body.client.name,
+          email: body.client.email       || undefined,
+          phone: body.client.phoneNumber || undefined,
+          document: {
+            type:   document.length > 11 ? 'CNPJ' : 'CPF',
+            number: document,
           },
-        };
-        const resp = await axios.post('https://api.payfortbank.com/api/v1/pix/in/qrcode', payload, {
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          timeout: 30000,
-        });
-        data = resp.data;
-        idTransaction     = data.data?.id;
-        paymentCode       = data.data?.pix?.emv;
-        paymentCodeBase64 = data.data?.pix?.qrCode;
-      } else if (gateway === 'bynet' || gateway === 'umbrella') {
-        // ByNet e Umbrella usam exatamente a mesma API — muda só a URL base e a key
-        const baseUrl = gateway === 'umbrella'
-          ? 'https://api-gateway.umbrellapag.com/api'
-          : 'https://api-gateway.techbynet.com/api';
-        const gwApiKey = gateway === 'umbrella' ? settings.umbrella_api_key : settings.bynet_api_key;
-        const amountInCents = Math.round(amount * 100);
-        const payload = {
-          amount:        amountInCents,
-          paymentMethod: 'PIX',
-          pix:           { expiresInDays: 1 },
-          items: [{
-            title:       `Pedido ${body.requestNumber}`,
-            quantity:    1,
-            tangible:    false,
-            unitPrice:   amountInCents,
-            externalRef: body.requestNumber,
-          }],
-          customer: {
-            name:  body.client.name,
-            email: body.client.email       || undefined,
-            phone: body.client.phoneNumber || undefined,
-            document: {
-              type:   document.length > 11 ? 'CNPJ' : 'CPF',
-              number: document,
-            },
-          },
-          postbackUrl: body.callbackUrl || undefined,
-        };
-        const resp = await axios.post(`${baseUrl}/user/transactions`, payload, {
-          headers: { 'x-api-key': gwApiKey, 'Content-Type': 'application/json' },
-          timeout: 30000,
-        });
-        data              = resp.data;
-        idTransaction     = data.data?.id;
-        paymentCode       = data.data?.qrCode || data.data?.pix?.qrcode;
-        paymentCodeBase64 = null;
-      } else {
-        const baseUrl = settings.suitpay_environment === 'production'
-          ? 'https://ws.suitpay.app'
-          : 'https://sandbox.ws.suitpay.app';
-        const resp = await axios.post(`${baseUrl}/api/v1/gateway/request-qrcode`, body, {
-          headers: { ci: settings.suitpay_ci, cs: settings.suitpay_cs, 'Content-Type': 'application/json' },
-          timeout: 30000,
-        });
-        data = resp.data;
-        idTransaction     = data.idTransaction;
-        paymentCode       = data.paymentCode;
-        paymentCodeBase64 = data.paymentCodeBase64;
-      }
+        },
+        postbackUrl: body.callbackUrl || undefined,
+      };
+      const resp = await axios.post(`${baseUrl}/user/transactions`, payload, {
+        headers: { 'x-api-key': gwApiKey, 'Content-Type': 'application/json' },
+        timeout: 30000,
+      });
+      data              = resp.data;
+      idTransaction     = data.data?.id;
+      paymentCode       = data.data?.qrCode || data.data?.pix?.qrcode;
+      paymentCodeBase64 = null;
 
       await dbUpdate('transactions', `id=eq.${reserved.id}`, {
         id_transaction:      idTransaction || null,

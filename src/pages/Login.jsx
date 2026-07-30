@@ -66,7 +66,7 @@ export default function Login() {
             {loading ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-box-arrow-in-right" /> Entrar</>}
           </button>
         </form>
-        <p className="text-center text-muted mt-3 mb-0" style={{ fontSize: '.75rem' }}>PIX Admin v2.0 · SuitPay Integration</p>
+        <p className="text-center text-muted mt-3 mb-0" style={{ fontSize: '.75rem' }}>PIX Admin v2.0 · ByNet & Umbrella</p>
       </div>
     </div>
   );

@@ -132,7 +132,7 @@ export default function TransactionDetail() {
                 <div className="row g-3">
                   {[
                     ['Número do Pedido', `#${tx.request_number}`],
-                    ['ID SuitPay', tx.id_transaction || '-'],
+                    ['ID Gateway', tx.id_transaction || '-'],
                     ['Criado em', fmtDate(tx.created_at)],
                     ['Atualizado em', fmtDate(tx.updated_at)],
                   ].map(([l, v]) => (

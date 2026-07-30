@@ -10,22 +10,19 @@ module.exports = async (req, res) => {
       const s = await getSettings();
       return res.status(200).json({
         adminUser:              s.admin_user || 'admin',
-        suitpayCi:              s.suitpay_ci || '',
-        suitpayCs:              s.suitpay_cs ? '••••••••' : '',
-        suitpayCsSet:           !!s.suitpay_cs,
-        suitpayEnvironment:     s.suitpay_environment || 'sandbox',
-        payfortAccountId:       s.payfort_account_id || '',
-        payfortApiKey:          s.payfort_api_key || '',
-        payfortApiSecret:       s.payfort_api_secret ? '••••••••' : '',
-        payfortApiSecretSet:    !!s.payfort_api_secret,
+        // Endpoint 1
         bynetApiKey:            s.bynet_api_key || '',
         umbrellaApiKey:         s.umbrella_api_key || '',
-        activeGateway:          s.active_gateway || 'suitpay',
-        activeGateway2:         s.active_gateway_2 || 'suitpay',
+        activeGateway:          s.active_gateway === 'umbrella' ? 'umbrella' : 'bynet',
+        utmifyToken:            s.utmify_token || '',
+        // Endpoint 2
+        bynetApiKey2:           s.bynet_api_key_2 || '',
+        umbrellaApiKey2:        s.umbrella_api_key_2 || '',
+        activeGateway2:         s.active_gateway_2 === 'umbrella' ? 'umbrella' : 'bynet',
+        utmifyToken2:           s.utmify_token_2 || '',
+        // Comum
         apiKey:                 s.api_key || '',
         serverBaseUrl:          s.server_base_url || '',
-        utmifyToken:            s.utmify_token || '',
-        utmifyToken2:           s.utmify_token_2 || '',
         supabaseConfigured:     !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
       });
     }
@@ -33,43 +30,41 @@ module.exports = async (req, res) => {
     if (req.method === 'POST') {
       const { action, ...data } = req.body;
 
-      if (action === 'suitpay') {
-        await setSetting('suitpay_ci', data.ci || '');
-        if (data.cs && !data.cs.startsWith('•')) await setSetting('suitpay_cs', data.cs);
-        await setSetting('suitpay_environment', data.environment === 'production' ? 'production' : 'sandbox');
-        await addLog('info', 'settings', `Credenciais SuitPay atualizadas (${data.environment})`);
-        return res.status(200).json({ ok: true });
-      }
-
-      if (action === 'payfort') {
-        await setSetting('payfort_account_id', data.accountId || '');
-        await setSetting('payfort_api_key', data.apiKey || '');
-        if (data.apiSecret && !data.apiSecret.startsWith('•')) await setSetting('payfort_api_secret', data.apiSecret);
-        await addLog('info', 'settings', 'Credenciais Payfort atualizadas');
-        return res.status(200).json({ ok: true });
-      }
-
+      // --- Endpoint 1 ---
       if (action === 'bynet') {
         await setSetting('bynet_api_key', data.apiKey || '');
-        await addLog('info', 'settings', 'API Key ByNet atualizada');
+        await addLog('info', 'settings', 'API Key ByNet (endpoint 1) atualizada');
         return res.status(200).json({ ok: true });
       }
 
       if (action === 'umbrella') {
         await setSetting('umbrella_api_key', data.apiKey || '');
-        await addLog('info', 'settings', 'API Key Umbrella atualizada');
+        await addLog('info', 'settings', 'API Key Umbrella (endpoint 1) atualizada');
         return res.status(200).json({ ok: true });
       }
 
       if (action === 'gateway') {
-        const gw = ['payfort', 'bynet', 'umbrella'].includes(data.activeGateway) ? data.activeGateway : 'suitpay';
+        const gw = data.activeGateway === 'umbrella' ? 'umbrella' : 'bynet';
         await setSetting('active_gateway', gw);
         await addLog('info', 'settings', `Gateway ativo (endpoint 1) alterado para: ${gw}`);
         return res.status(200).json({ ok: true });
       }
 
+      // --- Endpoint 2 ---
+      if (action === 'bynet2') {
+        await setSetting('bynet_api_key_2', data.apiKey || '');
+        await addLog('info', 'settings', 'API Key ByNet (endpoint 2) atualizada');
+        return res.status(200).json({ ok: true });
+      }
+
+      if (action === 'umbrella2') {
+        await setSetting('umbrella_api_key_2', data.apiKey || '');
+        await addLog('info', 'settings', 'API Key Umbrella (endpoint 2) atualizada');
+        return res.status(200).json({ ok: true });
+      }
+
       if (action === 'gateway2') {
-        const gw = ['payfort', 'bynet', 'umbrella'].includes(data.activeGateway2) ? data.activeGateway2 : 'suitpay';
+        const gw = data.activeGateway2 === 'umbrella' ? 'umbrella' : 'bynet';
         await setSetting('active_gateway_2', gw);
         await addLog('info', 'settings', `Gateway ativo (endpoint 2) alterado para: ${gw}`);
         return res.status(200).json({ ok: true });

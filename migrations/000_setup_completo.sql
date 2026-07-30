@@ -13,23 +13,24 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 -- Configurações iniciais — login: admin / password
+-- Dois endpoints independentes (ByNet ou Umbrella), cada um com credenciais próprias:
+--   Endpoint 1 (/api/pix):  active_gateway   + bynet_api_key   / umbrella_api_key   + utmify_token
+--   Endpoint 2 (/api/pix2): active_gateway_2 + bynet_api_key_2 / umbrella_api_key_2 + utmify_token_2
 INSERT INTO settings (key, value) VALUES
   ('admin_user',          'admin'),
   ('admin_password_hash', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'),
-  ('suitpay_ci',          ''),
-  ('suitpay_cs',          ''),
-  ('suitpay_environment', 'sandbox'),
   ('api_key',             ''),
   ('server_base_url',     ''),
-  ('active_gateway',      'suitpay'),
-  ('active_gateway_2',    'suitpay'),
-  ('utmify_token',        ''),
-  ('utmify_token_2',      ''),
-  ('payfort_account_id',  ''),
-  ('payfort_api_key',     ''),
-  ('payfort_api_secret',  ''),
+  -- Endpoint 1
+  ('active_gateway',      'bynet'),
   ('bynet_api_key',       ''),
-  ('umbrella_api_key',    '')
+  ('umbrella_api_key',    ''),
+  ('utmify_token',        ''),
+  -- Endpoint 2
+  ('active_gateway_2',    'bynet'),
+  ('bynet_api_key_2',     ''),
+  ('umbrella_api_key_2',  ''),
+  ('utmify_token_2',      '')
 ON CONFLICT (key) DO NOTHING;
 
 -- ----------------------------------------------------------------

@@ -73,7 +73,7 @@ export default function Transactions() {
             ) : (
               <table className="admin-table">
                 <thead>
-                  <tr><th>Pedido</th><th>ID SuitPay</th><th>Cliente</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Criado em</th><th></th></tr>
+                  <tr><th>Pedido</th><th>ID Gateway</th><th>Cliente</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Criado em</th><th></th></tr>
                 </thead>
                 <tbody>
                   {data.transactions.length === 0 && (

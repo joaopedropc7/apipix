@@ -50,13 +50,12 @@ export default function TransactionNew() {
     } finally { setLoading(false); }
   };
 
-  const activeGateway = ['payfort', 'bynet'].includes(settings?.activeGateway) ? settings.activeGateway : 'suitpay';
-  const gatewayLabel = activeGateway === 'payfort' ? 'PayFort' : activeGateway === 'bynet' ? 'ByNet' : 'SuitPay';
-  const configured = activeGateway === 'payfort'
-    ? settings?.payfortApiSecretSet && settings?.payfortApiKey
-    : activeGateway === 'bynet'
-    ? !!settings?.bynetApiKey
-    : settings?.suitpayCsSet && settings?.suitpayCi;
+  // Endpoint 1 (/api/pix/generate) — apenas ByNet ou Umbrella
+  const activeGateway = settings?.activeGateway === 'umbrella' ? 'umbrella' : 'bynet';
+  const gatewayLabel = activeGateway === 'umbrella' ? 'Umbrella' : 'ByNet';
+  const configured = activeGateway === 'umbrella'
+    ? !!settings?.umbrellaApiKey
+    : !!settings?.bynetApiKey;
   const webhookUrl = settings?.serverBaseUrl
     ? `${settings.serverBaseUrl.replace(/\/$/, '')}/api/webhook/${activeGateway}` : '';
 
