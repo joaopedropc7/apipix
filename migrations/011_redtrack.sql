@@ -2,7 +2,7 @@
 -- 011 — Integração RedTrack (postback via GET)
 -- ----------------------------------------------------------------
 -- O body do /generate aceita um "clickid" opcional. Quando presente:
---   ao gerar o PIX  → GET {url}?clickid={clickid}&sum=0&type=initiate
+--   ao gerar o PIX  → GET {url}?clickid={clickid}&sum=0&type=InitiateCheckout
 --   quando for pago → GET {url}?clickid={clickid}&sum={valor}&type=conversion
 --
 -- A URL base é configurável (default abaixo). O clickid é persistido

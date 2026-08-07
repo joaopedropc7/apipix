@@ -190,7 +190,7 @@ async function sendToUtmify(transaction, status, approvedDate = null, tokenKey =
 
 // ----------------------------------------------------------------
 // RedTrack — postback via GET server-to-server
-//   initiate:   .../postback?clickid={clickid}&sum=0&type=initiate     (ao gerar o PIX)
+//   InitiateCheckout: .../postback?clickid={clickid}&sum=0&type=InitiateCheckout   (ao gerar o PIX)
 //   conversion: .../postback?clickid={clickid}&sum={valor}&type=conversion  (ao ser pago)
 // ----------------------------------------------------------------
 const REDTRACK_POSTBACK_URL = 'https://kpcab.ttrk.io/postback';

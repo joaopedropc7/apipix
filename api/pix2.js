@@ -193,7 +193,7 @@ module.exports = async (req, res) => {
       await Promise.race([
         Promise.all([
           sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null, 'utmify_token_2'),
-          sendRedtrack(clickid, 'initiate', 0),
+          sendRedtrack(clickid, 'InitiateCheckout', 0),
         ]),
         new Promise(resolve => setTimeout(resolve, 8000)),
       ]);

@@ -174,7 +174,7 @@ export default function Settings() {
             <div className="form-section mb-3">
               <div className="form-section-title"><i className="bi bi-crosshair" /> RedTrack (Postback)</div>
               <p className="text-secondary small mb-3">
-                Envie <code>clickid</code> no body ao gerar o PIX. Ao gerar dispara <code>type=initiate</code> (sum=0)
+                Envie <code>clickid</code> no body ao gerar o PIX. Ao gerar dispara <code>type=InitiateCheckout</code> (sum=0)
                 e, quando pago, <code>type=conversion</code> (sum=valor pago).
               </p>
               <form onSubmit={e => { e.preventDefault(); save('redtrack', { redtrackPostbackUrl: new FormData(e.target).get('redtrackPostbackUrl') }); }}>

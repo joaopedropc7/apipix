@@ -194,12 +194,12 @@ module.exports = async (req, res) => {
 
       await addLog('info', 'api', `QR Code gerado (${gateway}): ${body.requestNumber}`, { idTransaction });
 
-      // Notifica Utmify + RedTrack (initiate) antes de responder — Vercel congela o container após res.json()
+      // Notifica Utmify + RedTrack (InitiateCheckout) antes de responder — Vercel congela o container após res.json()
       // Promise.race garante que não espera mais de 8s se algum destino estiver lento
       await Promise.race([
         Promise.all([
           sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null),
-          sendRedtrack(clickid, 'initiate', 0),
+          sendRedtrack(clickid, 'InitiateCheckout', 0),
         ]),
         new Promise(resolve => setTimeout(resolve, 8000)),
       ]);
