@@ -188,8 +188,39 @@ async function sendToUtmify(transaction, status, approvedDate = null, tokenKey =
   }
 }
 
+// ----------------------------------------------------------------
+// RedTrack — postback via GET server-to-server
+//   initiate:   .../postback?clickid={clickid}&sum=0&type=initiate     (ao gerar o PIX)
+//   conversion: .../postback?clickid={clickid}&sum={valor}&type=conversion  (ao ser pago)
+// ----------------------------------------------------------------
+const REDTRACK_POSTBACK_URL = 'https://kpcab.ttrk.io/postback';
+
+async function sendRedtrack(clickid, type, sum = 0) {
+  if (!clickid) return; // clickid é opcional — sem ele, não rastreia
+  let baseUrl = REDTRACK_POSTBACK_URL;
+  try {
+    const settings = await getSettings();
+    if (settings.redtrack_postback_url) baseUrl = settings.redtrack_postback_url;
+  } catch (_) { /* usa o default */ }
+
+  const params = { clickid, sum, type };
+  try {
+    const resp = await axios.get(baseUrl, { params, timeout: 8000 });
+    await addLog('info', 'redtrack', `RedTrack ${type} ✅ clickid=${clickid} sum=${sum}`, {
+      url: baseUrl, params, httpStatus: resp.status, response: resp.data,
+    });
+  } catch (err) {
+    await addLog('error', 'redtrack', `Erro RedTrack ${type}: clickid=${clickid}`, {
+      url: baseUrl, params,
+      httpStatus:   err.response?.status,
+      errorBody:    err.response?.data,
+      errorMessage: err.message,
+    });
+  }
+}
+
 module.exports = {
   dbSelect, dbInsert, dbUpsert, dbUpdate, dbDelete,
   getSettings, setSetting, addLog, authenticate, setCors,
-  toUtmifyDate, sendToUtmify,
+  toUtmifyDate, sendToUtmify, sendRedtrack,
 };

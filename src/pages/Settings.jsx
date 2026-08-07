@@ -170,6 +170,26 @@ export default function Settings() {
               </form>
             </div>
 
+            {/* RedTrack */}
+            <div className="form-section mb-3">
+              <div className="form-section-title"><i className="bi bi-crosshair" /> RedTrack (Postback)</div>
+              <p className="text-secondary small mb-3">
+                Envie <code>clickid</code> no body ao gerar o PIX. Ao gerar dispara <code>type=initiate</code> (sum=0)
+                e, quando pago, <code>type=conversion</code> (sum=valor pago).
+              </p>
+              <form onSubmit={e => { e.preventDefault(); save('redtrack', { redtrackPostbackUrl: new FormData(e.target).get('redtrackPostbackUrl') }); }}>
+                <div className="mb-2">
+                  <label className="form-label small fw-semibold text-secondary">URL base do postback</label>
+                  <input name="redtrackPostbackUrl" className="form-control font-monospace" defaultValue={settings.redtrackPostbackUrl}
+                    placeholder="https://kpcab.ttrk.io/postback" />
+                  <div className="form-text">Sem query string — o sistema anexa <code>?clickid=…&sum=…&type=…</code></div>
+                </div>
+                <button className="btn-primary-custom" type="submit" disabled={loading.redtrack}>
+                  {loading.redtrack ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar RedTrack</>}
+                </button>
+              </form>
+            </div>
+
           </div>
 
           <div className="col-lg-5">

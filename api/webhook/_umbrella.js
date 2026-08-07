@@ -1,4 +1,4 @@
-const { dbInsert, dbUpdate, dbSelect, addLog, sendToUtmify } = require('../_helpers');
+const { dbInsert, dbUpdate, dbSelect, addLog, sendToUtmify, sendRedtrack } = require('../_helpers');
 
 const STATUS_MAP = {
   paid:            'paid',
@@ -63,8 +63,15 @@ module.exports = async (req, res, tokenKey = 'utmify_token') => {
 
   if (newStatus === 'paid') {
     const fullTx = { ...transaction, ...update, raw_request: transaction.raw_request };
+    // clickid salvo no raw_request ao gerar o PIX (raw_request pode vir como string)
+    let raw = transaction.raw_request;
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = {}; } }
+    const clickid = raw?.clickid || null;
     await Promise.race([
-      sendToUtmify(fullTx, 'paid', update.payment_date, tokenKey),
+      Promise.all([
+        sendToUtmify(fullTx, 'paid', update.payment_date, tokenKey),
+        sendRedtrack(clickid, 'conversion', update.paid_value),
+      ]),
       new Promise(resolve => setTimeout(resolve, 8000)),
     ]);
   }

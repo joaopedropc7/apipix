@@ -1,7 +1,7 @@
 const axios = require('axios');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const { dbInsert, dbSelect, dbUpdate, getSettings, addLog, setCors, sendToUtmify } = require('./_helpers');
+const { dbInsert, dbSelect, dbUpdate, getSettings, addLog, setCors, sendToUtmify, sendRedtrack } = require('./_helpers');
 
 module.exports = async (req, res) => {
   setCors(res);
@@ -61,6 +61,10 @@ module.exports = async (req, res) => {
     if (!body.amount || !body.client?.name || !body.client?.document) {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes', required: ['amount', 'client.name', 'client.document'] });
     }
+
+    // clickid opcional (RedTrack) — normaliza e persiste em raw_request p/ o webhook usar depois
+    const clickid = body.clickid || body.clickId || body.click_id || null;
+    if (clickid) body.clickid = clickid;
 
     const document = body.client.document.replace(/\D/g, '');
     const amount   = parseFloat(body.amount);
@@ -190,10 +194,13 @@ module.exports = async (req, res) => {
 
       await addLog('info', 'api', `QR Code gerado (${gateway}): ${body.requestNumber}`, { idTransaction });
 
-      // Notifica Utmify antes de responder — Vercel congela o container após res.json()
-      // Promise.race garante que não espera mais de 8s se a Utmify estiver lenta
+      // Notifica Utmify + RedTrack (initiate) antes de responder — Vercel congela o container após res.json()
+      // Promise.race garante que não espera mais de 8s se algum destino estiver lento
       await Promise.race([
-        sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null),
+        Promise.all([
+          sendToUtmify({ ...reserved, id_transaction: idTransaction }, 'waiting_payment', null),
+          sendRedtrack(clickid, 'initiate', 0),
+        ]),
         new Promise(resolve => setTimeout(resolve, 8000)),
       ]);
 

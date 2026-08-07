@@ -23,6 +23,7 @@ module.exports = async (req, res) => {
         // Comum
         apiKey:                 s.api_key || '',
         serverBaseUrl:          s.server_base_url || '',
+        redtrackPostbackUrl:    s.redtrack_postback_url || 'https://kpcab.ttrk.io/postback',
         supabaseConfigured:     !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
       });
     }
@@ -73,6 +74,12 @@ module.exports = async (req, res) => {
       if (action === 'server') {
         await setSetting('server_base_url', data.serverBaseUrl || '');
         await addLog('info', 'settings', 'URL Base atualizada');
+        return res.status(200).json({ ok: true });
+      }
+
+      if (action === 'redtrack') {
+        await setSetting('redtrack_postback_url', (data.redtrackPostbackUrl || '').trim());
+        await addLog('info', 'settings', 'URL de postback RedTrack atualizada');
         return res.status(200).json({ ok: true });
       }
 

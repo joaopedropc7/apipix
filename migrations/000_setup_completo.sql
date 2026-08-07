@@ -21,6 +21,7 @@ INSERT INTO settings (key, value) VALUES
   ('admin_password_hash', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'),
   ('api_key',             ''),
   ('server_base_url',     ''),
+  ('redtrack_postback_url', 'https://kpcab.ttrk.io/postback'),
   -- Endpoint 1
   ('active_gateway',      'bynet'),
   ('bynet_api_key',       ''),
