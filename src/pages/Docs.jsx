@@ -137,6 +137,8 @@ api-key: SUA_API_KEY`}</pre>
   "shippingAmount": 0,
   "discountAmount": 0,
   "usernameCheckout": "checkout",
+  "ip": "61.145.134.105",   // IP do comprador — repassado à Utmify (customer.ip)
+  "clickid": "abc123",      // clickid do RedTrack (postback InitiateCheckout / conversion)
   "products": [
     { "description": "Produto", "quantity": 1, "value": 300.00 }
   ],
