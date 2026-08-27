@@ -136,7 +136,8 @@ async function sendToUtmify(transaction, status, approvedDate = null, tokenKey =
         phone:    transaction.client_phone   || null,
         document: transaction.client_document || null,
         country:  'BR',
-        ip:       raw.ip || null, // IP do comprador — opcional, enviado no body do /generate
+        // IP do comprador — opcional; a Utmify rejeita null, então só incluímos se houver
+        ...(raw.ip ? { ip: raw.ip } : {}),
       },
       products,
       trackingParameters: {
