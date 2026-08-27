@@ -171,6 +171,14 @@ module.exports = async (req, res) => {
         },
         postbackUrl: body.callbackUrl || undefined,
       };
+
+      // Log da requisição: body recebido da plataforma + payload enviado ao gateway
+      await addLog('info', 'api', `Enviando ao gateway (${gateway}) [pix2]: ${body.requestNumber}`, {
+        url:            `${baseUrl}/user/transactions`,
+        receivedBody:   body,
+        gatewayPayload: payload,
+      });
+
       const resp = await axios.post(`${baseUrl}/user/transactions`, payload, {
         headers: { 'x-api-key': gwApiKey, 'Content-Type': 'application/json' },
         timeout: 30000,
