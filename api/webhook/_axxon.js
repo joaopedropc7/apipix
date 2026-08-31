@@ -9,6 +9,9 @@ const STATUS_MAP = {
   APPROVED:  'paid',
   COMPLETED: 'paid',
   CONFIRMED: 'paid',
+  FINISHED:  'paid',   // Axxon envia FINISHED (event payment.approved) ao aprovar
+  SUCCEEDED: 'paid',
+  SUCCESS:   'paid',
   REFUNDED:  'refunded',
   CHARGEBACK:'refunded',
   REFUSED:   'error',
