@@ -164,6 +164,7 @@ module.exports = async (req, res) => {
           paymentMethod: 'pix',
           customer: {
             document: { type: document.length > 11 ? 'cnpj' : 'cpf', number: document },
+            items: [{ title: 'Tenis Confort', unitPrice: amountInCents, quantity: 1 }],
             name:  body.client.name,
             email: body.client.email       || undefined,
             phone: body.client.phoneNumber || undefined,

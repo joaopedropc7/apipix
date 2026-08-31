@@ -24,8 +24,8 @@ export default function Transactions() {
 
   const setFilter = (key, val) => {
     const p = new URLSearchParams(searchParams);
-    p.set(key, val); p.set('page', '1');
-    if (!val) p.delete(key);
+    val ? p.set(key, val) : p.delete(key);
+    if (key !== 'page') p.set('page', '1'); // trocar filtro volta pra pág. 1; trocar de página, mantém
     setSearchParams(p);
   };
 

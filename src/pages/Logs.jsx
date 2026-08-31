@@ -24,7 +24,7 @@ export default function Logs() {
   const setFilter = (key, val) => {
     const p = new URLSearchParams(searchParams);
     val ? p.set(key, val) : p.delete(key);
-    p.set('page', '1');
+    if (key !== 'page') p.set('page', '1'); // trocar filtro volta pra pág. 1; trocar de página, mantém
     setSearchParams(p);
   };
 
