@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { getSettings, saveSettings } from '../api/client';
 
-const gatewayLabel = (gw) => ({ bynet: 'ByNet', umbrella: 'Umbrella' }[gw] || 'ByNet');
+const gatewayLabel = (gw) => ({ bynet: 'ByNet', umbrella: 'Umbrella', axxon: 'Axxon' }[gw] || 'ByNet');
 
 const GATEWAYS = [
   ['bynet',    'ByNet',    'bi-lightning-charge'],
   ['umbrella', 'Umbrella', 'bi-umbrella'],
+  ['axxon',    'Axxon',    'bi-hexagon'],
 ];
 
 function Toast({ msg, type, onClose }) {
@@ -25,6 +26,8 @@ function EndpointCard({ n, settings, save, loading }) {
   const activeGateway   = n === 1 ? settings.activeGateway   : settings.activeGateway2;
   const bynetKey        = n === 1 ? settings.bynetApiKey      : settings.bynetApiKey2;
   const umbrellaKey     = n === 1 ? settings.umbrellaApiKey   : settings.umbrellaApiKey2;
+  const axxonPublicKey  = n === 1 ? settings.axxonPublicKey   : settings.axxonPublicKey2;
+  const axxonSecretKey  = n === 1 ? settings.axxonSecretKey   : settings.axxonSecretKey2;
   const utmifyToken     = n === 1 ? settings.utmifyToken      : settings.utmifyToken2;
   const path            = n === 1 ? '/api/pix' : '/api/pix2';
   const badgeClass      = n === 1 ? 'bg-primary' : 'bg-secondary';
@@ -78,6 +81,21 @@ function EndpointCard({ n, settings, save, loading }) {
           <input name="apiKey" className="form-control font-monospace" defaultValue={umbrellaKey} placeholder="x-api-key da UmbrellaPag" />
           <button className="btn-primary-custom" type="submit" disabled={loading[`umbrella${sfx}`]}>
             {loading[`umbrella${sfx}`] ? <span className="spinner-border spinner-border-sm" /> : <i className="bi bi-save" />}
+          </button>
+        </div>
+      </form>
+
+      {/* Credencial Axxon (duas chaves) */}
+      <form className="mb-3" onSubmit={e => { e.preventDefault(); const fd = new FormData(e.target); save(`axxon${sfx}`, { publicKey: fd.get('publicKey'), secretKey: fd.get('secretKey') }); }}>
+        <label className="form-label small fw-semibold text-secondary d-flex justify-content-between">
+          <span><i className="bi bi-hexagon me-1" /> Credenciais Axxon</span>
+          <span className={`badge ${axxonPublicKey && axxonSecretKey ? 'bg-success' : 'bg-secondary'}`} style={{ fontSize: '.62rem' }}>{axxonPublicKey && axxonSecretKey ? 'Configurado' : 'Vazio'}</span>
+        </label>
+        <input name="publicKey" className="form-control font-monospace mb-2" defaultValue={axxonPublicKey} placeholder="axxon-gateway-publickey" />
+        <div className="input-group">
+          <input name="secretKey" className="form-control font-monospace" defaultValue={axxonSecretKey} placeholder="axxon-gateway-secretkey" />
+          <button className="btn-primary-custom" type="submit" disabled={loading[`axxon${sfx}`]}>
+            {loading[`axxon${sfx}`] ? <span className="spinner-border spinner-border-sm" /> : <i className="bi bi-save" />}
           </button>
         </div>
       </form>

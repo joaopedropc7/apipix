@@ -13,12 +13,16 @@ module.exports = async (req, res) => {
         // Endpoint 1
         bynetApiKey:            s.bynet_api_key || '',
         umbrellaApiKey:         s.umbrella_api_key || '',
-        activeGateway:          s.active_gateway === 'umbrella' ? 'umbrella' : 'bynet',
+        axxonPublicKey:         s.axxon_public_key || '',
+        axxonSecretKey:         s.axxon_secret_key || '',
+        activeGateway:          ['umbrella', 'axxon'].includes(s.active_gateway) ? s.active_gateway : 'bynet',
         utmifyToken:            s.utmify_token || '',
         // Endpoint 2
         bynetApiKey2:           s.bynet_api_key_2 || '',
         umbrellaApiKey2:        s.umbrella_api_key_2 || '',
-        activeGateway2:         s.active_gateway_2 === 'umbrella' ? 'umbrella' : 'bynet',
+        axxonPublicKey2:        s.axxon_public_key_2 || '',
+        axxonSecretKey2:        s.axxon_secret_key_2 || '',
+        activeGateway2:         ['umbrella', 'axxon'].includes(s.active_gateway_2) ? s.active_gateway_2 : 'bynet',
         utmifyToken2:           s.utmify_token_2 || '',
         // Comum
         apiKey:                 s.api_key || '',
@@ -44,8 +48,15 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true });
       }
 
+      if (action === 'axxon') {
+        await setSetting('axxon_public_key', data.publicKey || '');
+        await setSetting('axxon_secret_key', data.secretKey || '');
+        await addLog('info', 'settings', 'Credenciais Axxon (endpoint 1) atualizadas');
+        return res.status(200).json({ ok: true });
+      }
+
       if (action === 'gateway') {
-        const gw = data.activeGateway === 'umbrella' ? 'umbrella' : 'bynet';
+        const gw = ['umbrella', 'axxon'].includes(data.activeGateway) ? data.activeGateway : 'bynet';
         await setSetting('active_gateway', gw);
         await addLog('info', 'settings', `Gateway ativo (endpoint 1) alterado para: ${gw}`);
         return res.status(200).json({ ok: true });
@@ -64,8 +75,15 @@ module.exports = async (req, res) => {
         return res.status(200).json({ ok: true });
       }
 
+      if (action === 'axxon2') {
+        await setSetting('axxon_public_key_2', data.publicKey || '');
+        await setSetting('axxon_secret_key_2', data.secretKey || '');
+        await addLog('info', 'settings', 'Credenciais Axxon (endpoint 2) atualizadas');
+        return res.status(200).json({ ok: true });
+      }
+
       if (action === 'gateway2') {
-        const gw = data.activeGateway2 === 'umbrella' ? 'umbrella' : 'bynet';
+        const gw = ['umbrella', 'axxon'].includes(data.activeGateway2) ? data.activeGateway2 : 'bynet';
         await setSetting('active_gateway_2', gw);
         await addLog('info', 'settings', `Gateway ativo (endpoint 2) alterado para: ${gw}`);
         return res.status(200).json({ ok: true });

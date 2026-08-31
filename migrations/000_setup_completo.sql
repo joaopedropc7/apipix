@@ -13,9 +13,9 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 -- Configurações iniciais — login: admin / password
--- Dois endpoints independentes (ByNet ou Umbrella), cada um com credenciais próprias:
---   Endpoint 1 (/api/pix):  active_gateway   + bynet_api_key   / umbrella_api_key   + utmify_token
---   Endpoint 2 (/api/pix2): active_gateway_2 + bynet_api_key_2 / umbrella_api_key_2 + utmify_token_2
+-- Dois endpoints independentes (ByNet, Umbrella ou Axxon), cada um com credenciais próprias:
+--   Endpoint 1 (/api/pix):  active_gateway   + credenciais_*   + utmify_token
+--   Endpoint 2 (/api/pix2): active_gateway_2 + credenciais_*_2 + utmify_token_2
 INSERT INTO settings (key, value) VALUES
   ('admin_user',          'admin'),
   ('admin_password_hash', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'),
@@ -26,11 +26,15 @@ INSERT INTO settings (key, value) VALUES
   ('active_gateway',      'bynet'),
   ('bynet_api_key',       ''),
   ('umbrella_api_key',    ''),
+  ('axxon_public_key',    ''),
+  ('axxon_secret_key',    ''),
   ('utmify_token',        ''),
   -- Endpoint 2
   ('active_gateway_2',    'bynet'),
   ('bynet_api_key_2',     ''),
   ('umbrella_api_key_2',  ''),
+  ('axxon_public_key_2',  ''),
+  ('axxon_secret_key_2',  ''),
   ('utmify_token_2',      '')
 ON CONFLICT (key) DO NOTHING;
 

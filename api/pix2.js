@@ -50,10 +50,14 @@ module.exports = async (req, res) => {
   // POST /api/pix2?action=generate
   if (action === 'generate' && req.method === 'POST') {
     // Endpoint 2 — gateway e credenciais próprios, independentes do endpoint 1
-    const gateway = settings.active_gateway_2 === 'umbrella' ? 'umbrella' : 'bynet';
+    const gateway = ['umbrella', 'axxon'].includes(settings.active_gateway_2) ? settings.active_gateway_2 : 'bynet';
     const gwApiKey = gateway === 'umbrella' ? settings.umbrella_api_key_2 : settings.bynet_api_key_2;
 
-    if (!gwApiKey) {
+    if (gateway === 'axxon') {
+      if (!settings.axxon_public_key_2 || !settings.axxon_secret_key_2) {
+        return res.status(503).json({ error: 'Credenciais Axxon (endpoint 2) não configuradas no painel admin' });
+      }
+    } else if (!gwApiKey) {
       return res.status(503).json({ error: `API Key ${gateway === 'umbrella' ? 'Umbrella' : 'ByNet'} (endpoint 2) não configurada no painel admin` });
     }
 
@@ -99,7 +103,9 @@ module.exports = async (req, res) => {
 
     const serverBase = settings.server_base_url?.trim().replace(/\/$/, '');
     // Webhooks dedicados ao endpoint 2 — encaminham para utmify_token_2
-    const webhookPath = gateway === 'umbrella' ? '/api/webhook/umbrella2' : '/api/webhook/bynet2';
+    const webhookPath = gateway === 'umbrella' ? '/api/webhook/umbrella2'
+      : gateway === 'axxon' ? '/api/webhook/axxon2'
+      : '/api/webhook/bynet2';
     body.callbackUrl = serverBase ? `${serverBase}${webhookPath}` : '';
 
     let reserved;
@@ -144,45 +150,66 @@ module.exports = async (req, res) => {
     try {
       let idTransaction, paymentCode, paymentCodeBase64, data;
 
-      // ByNet e Umbrella usam exatamente a mesma API — muda só a URL base e a key
-      const baseUrl = gateway === 'umbrella'
-        ? 'https://api-gateway.umbrellapag.com/api'
-        : 'https://api-gateway.techbynet.com/api';
       const amountInCents = Math.round(amount * 100);
-      const payload = {
-        amount:        amountInCents,
-        paymentMethod: 'PIX',
-        pix:           { expiresInDays: 1 },
-        items: [{
-          title:       `Pedido ${body.requestNumber}`,
-          quantity:    1,
-          tangible:    false,
-          unitPrice:   amountInCents,
-          externalRef: body.requestNumber,
-        }],
-        customer: {
-          name:  body.client.name,
-          email: body.client.email       || undefined,
-          phone: body.client.phoneNumber || undefined,
-          document: {
-            type:   document.length > 11 ? 'CNPJ' : 'CPF',
-            number: document,
+      let gwUrl, gwHeaders, gwPayload;
+
+      if (gateway === 'axxon') {
+        gwUrl = 'https://api.axxonpay.com.br/api/v1/direct/payment';
+        gwHeaders = {
+          'axxon-gateway-publickey': settings.axxon_public_key_2,
+          'axxon-gateway-secretkey': settings.axxon_secret_key_2,
+          'Content-Type': 'application/json',
+        };
+        gwPayload = {
+          paymentMethod: 'pix',
+          customer: {
+            document: { type: document.length > 11 ? 'cnpj' : 'cpf', number: document },
+            name:  body.client.name,
+            email: body.client.email       || undefined,
+            phone: body.client.phoneNumber || undefined,
           },
-        },
-        postbackUrl: body.callbackUrl || undefined,
-      };
+          amount:      amountInCents,
+          postbackUrl: body.callbackUrl || undefined,
+        };
+      } else {
+        // ByNet e Umbrella usam exatamente a mesma API — muda só a URL base e a key
+        const baseUrl = gateway === 'umbrella'
+          ? 'https://api-gateway.umbrellapag.com/api'
+          : 'https://api-gateway.techbynet.com/api';
+        gwUrl = `${baseUrl}/user/transactions`;
+        gwHeaders = { 'x-api-key': gwApiKey, 'Content-Type': 'application/json' };
+        gwPayload = {
+          amount:        amountInCents,
+          paymentMethod: 'PIX',
+          pix:           { expiresInDays: 1 },
+          items: [{
+            title:       `Pedido ${body.requestNumber}`,
+            quantity:    1,
+            tangible:    false,
+            unitPrice:   amountInCents,
+            externalRef: body.requestNumber,
+          }],
+          customer: {
+            name:  body.client.name,
+            email: body.client.email       || undefined,
+            phone: body.client.phoneNumber || undefined,
+            document: {
+              type:   document.length > 11 ? 'CNPJ' : 'CPF',
+              number: document,
+            },
+          },
+          postbackUrl: body.callbackUrl || undefined,
+        };
+      }
 
       // Log da requisição: body recebido da plataforma + payload enviado ao gateway
       await addLog('info', 'api', `Enviando ao gateway (${gateway}) [pix2]: ${body.requestNumber}`, {
-        url:            `${baseUrl}/user/transactions`,
+        url:            gwUrl,
         receivedBody:   body,
-        gatewayPayload: payload,
+        gatewayPayload: gwPayload,
       });
 
-      const resp = await axios.post(`${baseUrl}/user/transactions`, payload, {
-        headers: { 'x-api-key': gwApiKey, 'Content-Type': 'application/json' },
-        timeout: 30000,
-      });
+      const resp = await axios.post(gwUrl, gwPayload, { headers: gwHeaders, timeout: 30000 });
       data              = resp.data;
       idTransaction     = data.data?.id;
       paymentCode       = data.data?.qrCode || data.data?.pix?.qrcode;

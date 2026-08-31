@@ -50,11 +50,13 @@ export default function TransactionNew() {
     } finally { setLoading(false); }
   };
 
-  // Endpoint 1 (/api/pix/generate) — apenas ByNet ou Umbrella
-  const activeGateway = settings?.activeGateway === 'umbrella' ? 'umbrella' : 'bynet';
-  const gatewayLabel = activeGateway === 'umbrella' ? 'Umbrella' : 'ByNet';
+  // Endpoint 1 (/api/pix/generate) — ByNet, Umbrella ou Axxon
+  const activeGateway = ['umbrella', 'axxon'].includes(settings?.activeGateway) ? settings.activeGateway : 'bynet';
+  const gatewayLabel = activeGateway === 'umbrella' ? 'Umbrella' : activeGateway === 'axxon' ? 'Axxon' : 'ByNet';
   const configured = activeGateway === 'umbrella'
     ? !!settings?.umbrellaApiKey
+    : activeGateway === 'axxon'
+    ? !!(settings?.axxonPublicKey && settings?.axxonSecretKey)
     : !!settings?.bynetApiKey;
   const webhookUrl = settings?.serverBaseUrl
     ? `${settings.serverBaseUrl.replace(/\/$/, '')}/api/webhook/${activeGateway}` : '';
