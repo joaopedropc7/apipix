@@ -22,6 +22,7 @@ INSERT INTO settings (key, value) VALUES
   ('api_key',             ''),
   ('server_base_url',     ''),
   ('redtrack_postback_url', 'https://kpcab.ttrk.io/postback'),
+  ('axxon_postback_url',  ''),
   -- Endpoint 1
   ('active_gateway',      'bynet'),
   ('bynet_api_key',       ''),

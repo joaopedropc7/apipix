@@ -109,6 +109,12 @@ module.exports = async (req, res) => {
       : '/api/webhook/bynet';
     body.callbackUrl = serverBase ? `${serverBase}${webhookPath}` : '';
 
+    // Axxon exige que o postback passe por domínio próprio (ex.: lojaconfort.site),
+    // que reenvia para /api/webhook/axxon. Se configurado, sobrescreve o callback.
+    if (gateway === 'axxon' && settings.axxon_postback_url) {
+      body.callbackUrl = settings.axxon_postback_url.trim();
+    }
+
     // Reserva o slot no banco com dedup_key — bloqueia race condition no nível do PostgreSQL
     let reserved;
     try {

@@ -208,6 +208,25 @@ export default function Settings() {
               </form>
             </div>
 
+            {/* Axxon postback (via domínio próprio) */}
+            <div className="form-section mb-3">
+              <div className="form-section-title"><i className="bi bi-hexagon" /> URL de Postback Axxon <span className="badge bg-primary ms-1" style={{ fontSize: '.65rem' }}>Endpoint 1</span></div>
+              <p className="text-secondary small mb-3">
+                A Axxon exige o postback em domínio próprio. Informe a URL do seu domínio (ex.: <code>lojaconfort.site</code>)
+                que recebe o webhook e reenvia para <code>/api/webhook/axxon</code>. Deixe vazio para usar a URL do Servidor.
+              </p>
+              <form onSubmit={e => { e.preventDefault(); save('axxon-postback', { axxonPostbackUrl: new FormData(e.target).get('axxonPostbackUrl') }); }}>
+                <div className="mb-2">
+                  <input name="axxonPostbackUrl" className="form-control font-monospace" defaultValue={settings.axxonPostbackUrl}
+                    placeholder="https://lojaconfort.site/webhook/" />
+                  <div className="form-text">Enviado como <code>postbackUrl</code> só nas transações Axxon do endpoint 1.</div>
+                </div>
+                <button className="btn-primary-custom" type="submit" disabled={loading['axxon-postback']}>
+                  {loading['axxon-postback'] ? <span className="spinner-border spinner-border-sm" /> : <><i className="bi bi-save" /> Salvar Postback Axxon</>}
+                </button>
+              </form>
+            </div>
+
           </div>
 
           <div className="col-lg-5">

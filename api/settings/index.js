@@ -28,6 +28,7 @@ module.exports = async (req, res) => {
         apiKey:                 s.api_key || '',
         serverBaseUrl:          s.server_base_url || '',
         redtrackPostbackUrl:    s.redtrack_postback_url || 'https://kpcab.ttrk.io/postback',
+        axxonPostbackUrl:       s.axxon_postback_url || '',
         supabaseConfigured:     !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
       });
     }
@@ -98,6 +99,12 @@ module.exports = async (req, res) => {
       if (action === 'redtrack') {
         await setSetting('redtrack_postback_url', (data.redtrackPostbackUrl || '').trim());
         await addLog('info', 'settings', 'URL de postback RedTrack atualizada');
+        return res.status(200).json({ ok: true });
+      }
+
+      if (action === 'axxon-postback') {
+        await setSetting('axxon_postback_url', (data.axxonPostbackUrl || '').trim());
+        await addLog('info', 'settings', 'URL de postback Axxon atualizada');
         return res.status(200).json({ ok: true });
       }
 
