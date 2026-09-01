@@ -221,8 +221,19 @@ async function sendRedtrack(clickid, type, sum = 0) {
   }
 }
 
+// Nome do produto (Axxon) conforme o ticket — chave em centavos p/ evitar erro de float
+const AXXON_PRODUCTS = {
+  7490:  'Chinelo Masculino Adulto',
+  8211:  'Chinelo Slide Masculino',
+  19147: 'Tênis Esportivo Amortecimento em Gel',
+  6321:  'Kit 24 Pares de Meia',
+};
+function axxonProductName(amountInCents) {
+  return AXXON_PRODUCTS[amountInCents] || 'Tenis Confort';
+}
+
 module.exports = {
   dbSelect, dbInsert, dbUpsert, dbUpdate, dbDelete,
   getSettings, setSetting, addLog, authenticate, setCors,
-  toUtmifyDate, sendToUtmify, sendRedtrack,
+  toUtmifyDate, sendToUtmify, sendRedtrack, axxonProductName,
 };

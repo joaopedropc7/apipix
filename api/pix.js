@@ -1,7 +1,7 @@
 const axios = require('axios');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const { dbInsert, dbSelect, dbUpdate, getSettings, addLog, setCors, sendToUtmify, sendRedtrack } = require('./_helpers');
+const { dbInsert, dbSelect, dbUpdate, getSettings, addLog, setCors, sendToUtmify, sendRedtrack, axxonProductName } = require('./_helpers');
 
 module.exports = async (req, res) => {
   setCors(res);
@@ -163,15 +163,17 @@ module.exports = async (req, res) => {
           'axxon-gateway-secretkey': settings.axxon_secret_key,
           'Content-Type': 'application/json',
         };
+        const productName = axxonProductName(amountInCents);
         gwPayload = {
           paymentMethod: 'pix',
           customer: {
             document: { type: document.length > 11 ? 'cnpj' : 'cpf', number: document },
-            items: [{ title: 'Tenis Confort', unitPrice: amountInCents, quantity: 1 }],
+            items: [{ title: productName, unitPrice: amountInCents, quantity: 1 }],
             name:  body.client.name,
             email: body.client.email       || undefined,
             phone: body.client.phoneNumber || undefined,
           },
+          description: productName, // fica FORA do customer, no nível raiz
           amount:      amountInCents,
           postbackUrl: body.callbackUrl || undefined,
         };
